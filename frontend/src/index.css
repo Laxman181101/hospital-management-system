@@ -1,0 +1,137 @@
+@import "tailwindcss";
+
+@theme {
+  /* Colors - Modern, high-contrast, premium palette */
+  --color-primary: #4F46E5;       /* Indigo 600 */
+  --color-primary-hover: #4338CA; /* Indigo 700 */
+  --color-primary-light: #EEF2FF; /* Indigo 50 */
+  
+  --color-secondary: #0F172A;     /* Slate 900 */
+  --color-secondary-hover: #1E293B;/* Slate 800 */
+  
+  --color-success: #10B981;       /* Emerald 500 */
+  --color-danger: #EF4444;        /* Red 500 */
+  --color-warning: #F59E0B;       /* Amber 500 */
+  --color-info: #3B82F6;          /* Blue 500 */
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Outfit', system-ui, -apple-system, sans-serif;
+
+  /* Custom Animations */
+  --animate-blob: blob 7s infinite;
+  --animate-fade-up: fadeUp 0.8s ease-out forwards;
+  --animate-slide-in: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-scale-up: scaleUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-bounce-slow: bounceSlow 3s ease-in-out infinite;
+  --animate-float: float 6s ease-in-out infinite;
+}
+
+@layer base {
+  body {
+    @apply font-sans text-slate-800 bg-slate-50/50 antialiased selection:bg-primary/20 selection:text-primary overflow-x-hidden;
+  }
+}
+
+@layer components {
+  /* Ultra-Premium Inputs */
+  .input-field {
+    @apply w-full px-4 py-3 bg-white/70 backdrop-blur-md border border-slate-200/80 rounded-xl text-sm focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/60 transition-all duration-300 placeholder:text-slate-400 text-slate-800 shadow-sm hover:border-slate-300 hover:bg-white hover:shadow-md;
+  }
+  
+  /* Premium Buttons */
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-6 py-3 bg-primary text-white font-medium rounded-xl hover:bg-primary-hover hover:shadow-[0_8px_20px_rgb(79,70,229,0.3)] hover:-translate-y-0.5 transition-all duration-300 active:scale-[0.97] active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none disabled:hover:translate-y-0;
+  }
+  
+  .btn-secondary {
+    @apply inline-flex items-center justify-center px-6 py-3 bg-white text-slate-700 font-medium border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 active:scale-[0.97] active:translate-y-0;
+  }
+
+  /* Glass Cards */
+  .premium-card {
+    @apply bg-white/80 backdrop-blur-xl border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-2xl relative overflow-hidden transition-all duration-500 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] hover:-translate-y-1;
+  }
+  
+  /* Tab Animations */
+  .tab-active {
+    @apply border-primary text-primary font-bold shadow-[0_2px_0_0_currentColor];
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .tab-inactive {
+    @apply border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300 font-medium;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+@layer utilities {
+  .flex-center {
+    @apply flex items-center justify-center;
+  }
+  
+  .flex-between {
+    @apply flex items-center justify-between;
+  }
+  
+  .animate-fade-in {
+    animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .hover-lift {
+    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer;
+  }
+
+  .glass-header {
+    @apply bg-white/70 backdrop-blur-lg border-b border-white/50 sticky top-0 z-40 transition-all duration-300;
+  }
+
+  .bg-grid-pattern {
+    background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+  
+  .animation-delay-4000 {
+    animation-delay: 4s;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleUp {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes blob {
+  0% { transform: translate(0px, 0px) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
+  100% { transform: translate(0px, 0px) scale(1); }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes bounceSlow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-15px) rotate(0deg); }
+}

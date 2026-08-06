@@ -1,0 +1,59 @@
+services:
+  # MongoDB Database Service
+  mongodb:
+    image: mongo:7.0
+    container_name: hms-mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - hms-network
+
+  # Node.js Express Backend API Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: hms-backend
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - MONGODB_URI=mongodb+srv://laxmansaroj:lax31579@cluster0.up7cyws.mongodb.net/hms-db
+      - JWT_SECRET=hms_super_secret_jwt_key_2026
+      - JWT_REFRESH_SECRET=hms_super_secret_refresh_key_2026
+      - SUPER_ADMIN_SECRET=hms_super_secret_2026
+      - NODE_ENV=production
+    depends_on:
+      - mongodb
+    volumes:
+      - backend_uploads:/app/uploads
+    networks:
+      - hms-network
+
+  # React Vite Frontend Service (Nginx)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: hms-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - hms-network
+
+# Persistent Volumes
+volumes:
+  mongo_data:
+  backend_uploads:
+
+# Networks
+networks:
+  hms-network:
+    driver: bridge

@@ -1,0 +1,237 @@
+{
+  "Ambulance": [
+    "GET /api/v1/ambulances",
+    "POST /api/v1/ambulances",
+    "GET /api/v1/ambulances/available",
+    "PUT /api/v1/ambulances/{id}",
+    "POST /api/v1/ambulances/{id}/dispatch",
+    "POST /api/v1/ambulances/dispatch/{dispatchId}/return"
+  ],
+  "Appointments": [
+    "POST /api/v1/appointments",
+    "GET /api/v1/appointments",
+    "GET /api/v1/appointments/my",
+    "GET /api/v1/appointments/doctor",
+    "PATCH /api/v1/appointments/{id}/cancel",
+    "PATCH /api/v1/appointments/{id}/status",
+    "GET /api/v1/appointments/slots",
+    "GET /api/v1/appointments/{id}",
+    "DELETE /api/v1/appointments/{id}",
+    "PATCH /api/v1/appointments/{id}/reschedule",
+    "PATCH /api/v1/appointments/{id}/payment"
+  ],
+  "AudioConsultation": [
+    "POST /api/v1/audio-consultations/create",
+    "POST /api/v1/audio-consultations/generate-link",
+    "GET /api/v1/audio-consultations/doctor/{doctorId}",
+    "GET /api/v1/audio-consultations/{id}",
+    "GET /api/v1/audio-consultations/{id}/join",
+    "PUT /api/v1/audio-consultations/{id}/status"
+  ],
+  "Auth": [
+    "POST /api/v1/auth/register",
+    "POST /api/v1/auth/create-super-admin",
+    "POST /api/v1/auth/register-staff",
+    "GET /api/v1/auth/staff",
+    "GET /api/v1/auth/staff/{id}",
+    "PATCH /api/v1/auth/staff/{id}",
+    "DELETE /api/v1/auth/staff/{id}",
+    "POST /api/v1/auth/login",
+    "POST /api/v1/auth/request-otp",
+    "POST /api/v1/auth/login-with-otp",
+    "POST /api/v1/auth/forgot-password",
+    "POST /api/v1/auth/reset-password",
+    "PATCH /api/v1/auth/change-password",
+    "POST /api/v1/auth/refresh-token",
+    "POST /api/v1/auth/logout",
+    "GET /api/v1/auth/pending-admins",
+    "PATCH /api/v1/auth/approve/{id}",
+    "PATCH /api/v1/auth/profile/photo"
+  ],
+  "Billing": [
+    "POST /api/v1/billing",
+    "GET /api/v1/billing",
+    "GET /api/v1/billing/{id}",
+    "PATCH /api/v1/billing/{id}/payment",
+    "GET /api/v1/billing/{id}/download"
+  ],
+  "Billing & Finance": [
+    "POST /api/v1/billing/collect-payment",
+    "GET /api/v1/billing/transactions"
+  ],
+  "ChatConsultation": [
+    "POST /api/v1/chat-consultations/create",
+    "GET /api/v1/chat-consultations/session/{sessionId}",
+    "GET /api/v1/chat-consultations/session/{sessionId}/messages",
+    "POST /api/v1/chat-consultations/send-message",
+    "POST /api/v1/chat-consultations/upload",
+    "PUT /api/v1/chat-consultations/session/{sessionId}/end"
+  ],
+  "Consultation": [
+    "POST /api/v1/consultations",
+    "GET /api/v1/consultations",
+    "GET /api/v1/consultations/appointments",
+    "GET /api/v1/consultations/patient/{id}",
+    "GET /api/v1/consultations/{id}",
+    "POST /api/v1/consultations/{id}/symptoms",
+    "POST /api/v1/consultations/{id}/diagnosis",
+    "POST /api/v1/consultations/{id}/notes",
+    "POST /api/v1/consultations/{id}/followup"
+  ],
+  "Dashboard": [
+    "GET /api/v1/dashboard/super-admin/summary",
+    "GET /api/v1/dashboard/hospital-admin/summary",
+    "GET /api/v1/dashboard/doctor/complete",
+    "GET /api/v1/dashboard/doctor/summary",
+    "GET /api/v1/dashboard/appointments/stats",
+    "GET /api/v1/dashboard/patients/stats",
+    "GET /api/v1/dashboard/revenue/summary",
+    "GET /api/v1/dashboard/platform-usage"
+  ],
+  "Doctors": [
+    "GET /api/v1/doctors",
+    "POST /api/v1/doctors",
+    "PUT /api/v1/doctors/profile",
+    "GET /api/v1/doctors/appointments"
+  ],
+  "Finance": [
+    "POST /api/v1/finance/expenses",
+    "GET /api/v1/finance/expenses",
+    "POST /api/v1/finance/payrolls",
+    "GET /api/v1/finance/payrolls",
+    "PATCH /api/v1/finance/payrolls/{payrollId}/status",
+    "GET /api/v1/finance/overview"
+  ],
+  "Inventory": [
+    "POST /api/v1/inventory/items",
+    "GET /api/v1/inventory/items",
+    "PATCH /api/v1/inventory/items/{itemId}",
+    "POST /api/v1/inventory/transactions",
+    "GET /api/v1/inventory/transactions"
+  ],
+  "Laboratory": [
+    "POST /api/v1/laboratory/tests",
+    "GET /api/v1/laboratory/tests",
+    "PATCH /api/v1/laboratory/tests/{testId}",
+    "DELETE /api/v1/laboratory/tests/{testId}",
+    "POST /api/v1/laboratory/requests",
+    "GET /api/v1/laboratory/requests",
+    "GET /api/v1/laboratory/requests/{requestId}",
+    "PATCH /api/v1/laboratory/requests/{requestId}/tests/{testItemId}/status",
+    "PATCH /api/v1/laboratory/requests/{requestId}/tests/{testItemId}/report"
+  ],
+  "Notification": [
+    "POST /api/v1/notifications/send-custom",
+    "POST /api/v1/notifications/appointment-reminder",
+    "POST /api/v1/notifications/followup-reminder",
+    "POST /api/v1/notifications/medication-reminder",
+    "GET /api/v1/notifications/my-notifications",
+    "PATCH /api/v1/notifications/{id}/read"
+  ],
+  "OperationTheater": [
+    "POST /api/v1/operation-theaters/rooms",
+    "GET /api/v1/operation-theaters/rooms",
+    "GET /api/v1/operation-theaters/rooms/{id}",
+    "PUT /api/v1/operation-theaters/rooms/{id}",
+    "DELETE /api/v1/operation-theaters/rooms/{id}",
+    "POST /api/v1/operation-theaters/surgeries",
+    "GET /api/v1/operation-theaters/surgeries",
+    "GET /api/v1/operation-theaters/surgeries/{id}",
+    "PATCH /api/v1/operation-theaters/surgeries/{id}/status",
+    "PATCH /api/v1/operation-theaters/surgeries/{id}/reschedule"
+  ],
+  "Patients": [
+    "POST /api/v1/patients/register",
+    "POST /api/v1/patients/login",
+    "GET /api/v1/patients/profile",
+    "PUT /api/v1/patients/profile",
+    "GET /api/v1/patients/profile/{id}",
+    "PUT /api/v1/patients/profile/{id}",
+    "GET /api/v1/patients/medical-history",
+    "POST /api/v1/patients/medical-history",
+    "GET /api/v1/patients/medical-history/{id}",
+    "POST /api/v1/patients/medical-history/{id}",
+    "GET /api/v1/patients/records/me",
+    "GET /api/v1/patients/records/{id}",
+    "POST /api/v1/patients/reports/upload",
+    "GET /api/v1/patients/appointments",
+    "POST /api/v1/patients/appointments",
+    "GET /api/v1/patients/appointments/{id}",
+    "POST /api/v1/patients/appointments/{id}",
+    "GET /api/v1/patients/prescriptions",
+    "GET /api/v1/patients/prescriptions/{id}",
+    "POST /api/v1/patients/prescriptions/{id}",
+    "GET /api/v1/patients",
+    "POST /api/v1/patients/manual",
+    "GET /api/v1/patients/{id}",
+    "DELETE /api/v1/patients/{id}"
+  ],
+  "Ward": [
+    "POST /api/v1/patients/manual",
+    "POST /api/v1/ward/admission-requests",
+    "GET /api/v1/ward/admission-requests",
+    "POST /api/v1/ward/wards",
+    "GET /api/v1/ward/wards",
+    "POST /api/v1/ward/admissions",
+    "GET /api/v1/ward/admissions",
+    "PATCH /api/v1/ward/admissions/{allocationId}/discharge",
+    "PATCH /api/v1/ward/admissions/{id}/request-discharge",
+    "POST /api/v1/ward/vitals",
+    "GET /api/v1/ward/admissions/{allocationId}/vitals"
+  ],
+  "Payments": [
+    "POST /api/payments/webhook",
+    "GET /api/payments/all",
+    "GET /api/payments/stats/revenue",
+    "POST /api/payments/refund",
+    "GET /api/payments/invoice/{id}",
+    "POST /api/payments/create-order",
+    "POST /api/payments/verify",
+    "GET /api/payments/history",
+    "GET /api/payments/{id}/download-receipt",
+    "GET /api/payments/{id}"
+  ],
+  "Pharmacy": [
+    "POST /api/v1/pharmacy/medicines",
+    "GET /api/v1/pharmacy/medicines",
+    "PATCH /api/v1/pharmacy/medicines/{medicineId}",
+    "POST /api/v1/pharmacy/orders",
+    "GET /api/v1/pharmacy/orders",
+    "PATCH /api/v1/pharmacy/orders/{orderId}/status"
+  ],
+  "Prescription": [
+    "POST /api/v1/prescriptions",
+    "GET /api/v1/prescriptions",
+    "PUT /api/v1/prescriptions/{id}",
+    "GET /api/v1/prescriptions/{id}",
+    "GET /api/v1/prescriptions/patient/me",
+    "GET /api/v1/prescriptions/patient/{patientId}"
+  ],
+  "VideoConsultation": [
+    "POST /api/v1/video-consultations/create",
+    "POST /api/v1/video-consultations/generate-link",
+    "GET /api/v1/video-consultations/doctor/{doctorId}",
+    "GET /api/v1/video-consultations/{id}",
+    "GET /api/v1/video-consultations/{id}/join",
+    "PUT /api/v1/video-consultations/{id}/status"
+  ],
+  "Hospitals": [
+    "POST /api/v1/hospitals/onboard",
+    "POST /api/v1/hospitals/create",
+    "GET /api/v1/hospitals",
+    "GET /api/v1/hospitals/active",
+    "GET /api/v1/hospitals/search",
+    "GET /api/v1/hospitals/nearby",
+    "GET /api/v1/hospitals/{id}/doctors",
+    "POST /api/v1/hospitals/{id}/upload-logo",
+    "POST /api/v1/hospitals/{id}/upload-images",
+    "PATCH /api/v1/hospitals/{id}/status",
+    "POST /api/v1/hospitals/{id}/services",
+    "DELETE /api/v1/hospitals/{id}/services/{serviceId}",
+    "POST /api/v1/hospitals/{id}/reviews",
+    "GET /api/v1/hospitals/{id}/reviews",
+    "PATCH /api/v1/hospitals/location/{id}",
+    "PUT /api/v1/hospitals/{id}",
+    "DELETE /api/v1/hospitals/{id}"
+  ]
+}
