@@ -210,7 +210,7 @@ const getMyAppointments = async (req, res, next) => {
 // GET DOCTOR APPOINTMENTS (laxman version)
 const getDoctorAppointments = async (req, res, next) => {
     try {
-        const appointments = await appointmentService.getDoctorAppointments(req.user.sub);
+        const appointments = await appointmentService.getDoctorAppointments(req.user.sub, req.query);
         res.status(200).json({
             success: true,
             data: appointments,

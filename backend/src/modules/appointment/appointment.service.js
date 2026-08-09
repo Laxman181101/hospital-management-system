@@ -169,7 +169,10 @@ const getDoctorAppointments =
       startOfDay.setHours(0, 0, 0, 0);
       const endOfDay = new Date(query.date);
       endOfDay.setHours(23, 59, 59, 999);
-      filter.appointmentDate = { $gte: startOfDay, $lte: endOfDay };
+      filter.$or = [
+          { appointmentDate: { $gte: startOfDay, $lte: endOfDay } },
+          { date: { $gte: startOfDay, $lte: endOfDay } }
+      ];
     }
 
     const appointments =

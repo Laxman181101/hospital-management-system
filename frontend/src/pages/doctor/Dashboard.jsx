@@ -61,7 +61,7 @@ const DoctorDashboard = () => {
   const stats = [
     { label: "Today's Appointments", value: data?.dailyAppointments ?? todayAppointments.length, icon: Calendar, color: 'bg-indigo-100 text-indigo-600' },
     { label: 'Pending Consultations', value: data?.pendingConsultations || 0, icon: Clock, color: 'bg-amber-100 text-amber-600' },
-    { label: 'Total Patients', value: data?.patients?.total || 0, icon: Users, color: 'bg-emerald-100 text-emerald-600' },
+    { label: 'Total Patients', value: data?.patients?.totalPatients || 0, icon: Users, color: 'bg-emerald-100 text-emerald-600' },
     { label: 'IPD Admitted', value: ipdCount, icon: Bed, color: 'bg-purple-100 text-purple-600' },
   ];
 

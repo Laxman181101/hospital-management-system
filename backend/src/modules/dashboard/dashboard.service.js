@@ -22,8 +22,8 @@ const getTrendData = async (matchQuery) => {
             {
                 $group: {
                     _id: {
-                        year: { $year: { $ifNull: ['$appointmentDate', '$createdAt'] } },
-                        month: { $month: { $ifNull: ['$appointmentDate', '$createdAt'] } }
+                        year: { $year: { $ifNull: ['$appointmentDate', { $ifNull: ['$date', '$createdAt'] }] } },
+                        month: { $month: { $ifNull: ['$appointmentDate', { $ifNull: ['$date', '$createdAt'] }] } }
                     },
                     revenue: {
                         $sum: {
@@ -43,8 +43,8 @@ const getTrendData = async (matchQuery) => {
             {
                 $group: {
                     _id: {
-                        year: { $year: { $ifNull: ['$appointmentDate', '$createdAt'] } },
-                        month: { $month: { $ifNull: ['$appointmentDate', '$createdAt'] } }
+                        year: { $year: { $ifNull: ['$appointmentDate', { $ifNull: ['$date', '$createdAt'] }] } },
+                        month: { $month: { $ifNull: ['$appointmentDate', { $ifNull: ['$date', '$createdAt'] }] } }
                     },
                     count: { $sum: 1 }
                 }
@@ -57,8 +57,8 @@ const getTrendData = async (matchQuery) => {
             {
                 $group: {
                     _id: {
-                        year: { $year: { $ifNull: ['$appointmentDate', '$createdAt'] } },
-                        month: { $month: { $ifNull: ['$appointmentDate', '$createdAt'] } },
+                        year: { $year: { $ifNull: ['$appointmentDate', { $ifNull: ['$date', '$createdAt'] }] } },
+                        month: { $month: { $ifNull: ['$appointmentDate', { $ifNull: ['$date', '$createdAt'] }] } },
                         patient: '$patient'
                     }
                 }
@@ -223,17 +223,20 @@ const getDoctorSummary = async (userId) => {
         const todayEnd = new Date();
         todayEnd.setHours(23, 59, 59, 999);
 
-        dailyAppointments = await Appointment.countDocuments({
-            doctor: doctor._id,
-            appointmentDate: { $gte: todayStart, $lte: todayEnd }
-        });
-
-        pendingConsultations = await Consultation.countDocuments({
-            doctor: doctor._id,
-            status: 'draft'
-        });
-
-        trends = await getTrendData({ doctor: doctor._id });
+        [dailyAppointments, pendingConsultations, trends] = await Promise.all([
+            Appointment.countDocuments({
+                doctor: doctor._id,
+                $or: [
+                    { appointmentDate: { $gte: todayStart, $lte: todayEnd } },
+                    { date: { $gte: todayStart, $lte: todayEnd } }
+                ]
+            }),
+            Consultation.countDocuments({
+                doctor: doctor._id,
+                status: 'draft'
+            }),
+            getTrendData({ doctor: doctor._id })
+        ]);
     }
 
     return {
