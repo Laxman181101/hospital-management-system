@@ -44,7 +44,7 @@ const createConsultation = async (doctorId, consultationData) => {
     const consultation = new Consultation({
         doctor: doctorId,
         patient: patient._id,
-        status: 'draft',
+        status: rest.status || 'completed',
         ...rest
     });
 
