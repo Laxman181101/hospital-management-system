@@ -6,74 +6,74 @@ const Doctor = require('../doctor/doctor.model');
 const Consultation = require('../consultation/consultation.model');
 
 const getTrendData = async (matchQuery) => {
-    // 1. Revenue Trend
-    const revenueTrendData = await Appointment.aggregate([
-        { $match: { ...matchQuery, paymentStatus: { $in: ['paid', 'success'] } } },
-        {
-            $lookup: {
-                from: 'doctors',
-                localField: 'doctor',
-                foreignField: '_id',
-                as: 'doctorInfo'
-            }
-        },
-        { $unwind: { path: '$doctorInfo', preserveNullAndEmptyArrays: true } },
-        {
-            $group: {
-                _id: {
-                    year: { $year: { $ifNull: ['$appointmentDate', '$createdAt'] } },
-                    month: { $month: { $ifNull: ['$appointmentDate', '$createdAt'] } }
-                },
-                revenue: {
-                    $sum: {
-                        $ifNull: [
-                            '$consultationFee',
-                            { $ifNull: ['$doctorInfo.consultationFee', 0] }
-                        ]
+    const [revenueTrendData, appointmentTrendData, patientTrendData] = await Promise.all([
+        // 1. Revenue Trend
+        Appointment.aggregate([
+            { $match: { ...matchQuery, paymentStatus: { $in: ['paid', 'success'] } } },
+            {
+                $lookup: {
+                    from: 'doctors',
+                    localField: 'doctor',
+                    foreignField: '_id',
+                    as: 'doctorInfo'
+                }
+            },
+            { $unwind: { path: '$doctorInfo', preserveNullAndEmptyArrays: true } },
+            {
+                $group: {
+                    _id: {
+                        year: { $year: { $ifNull: ['$appointmentDate', '$createdAt'] } },
+                        month: { $month: { $ifNull: ['$appointmentDate', '$createdAt'] } }
+                    },
+                    revenue: {
+                        $sum: {
+                            $ifNull: [
+                                '$consultationFee',
+                                { $ifNull: ['$doctorInfo.consultationFee', 0] }
+                            ]
+                        }
                     }
                 }
-            }
-        },
-        { $sort: { '_id.year': 1, '_id.month': 1 } }
-    ]);
-
-    // 2. Appointment Trend
-    const appointmentTrendData = await Appointment.aggregate([
-        { $match: matchQuery },
-        {
-            $group: {
-                _id: {
-                    year: { $year: { $ifNull: ['$appointmentDate', '$createdAt'] } },
-                    month: { $month: { $ifNull: ['$appointmentDate', '$createdAt'] } }
-                },
-                count: { $sum: 1 }
-            }
-        },
-        { $sort: { '_id.year': 1, '_id.month': 1 } }
-    ]);
-
-    // 3. Patient Trend
-    const patientTrendData = await Appointment.aggregate([
-        { $match: matchQuery },
-        {
-            $group: {
-                _id: {
-                    year: { $year: { $ifNull: ['$appointmentDate', '$createdAt'] } },
-                    month: { $month: { $ifNull: ['$appointmentDate', '$createdAt'] } },
-                    patient: '$patient'
+            },
+            { $sort: { '_id.year': 1, '_id.month': 1 } }
+        ]),
+        // 2. Appointment Trend
+        Appointment.aggregate([
+            { $match: matchQuery },
+            {
+                $group: {
+                    _id: {
+                        year: { $year: { $ifNull: ['$appointmentDate', '$createdAt'] } },
+                        month: { $month: { $ifNull: ['$appointmentDate', '$createdAt'] } }
+                    },
+                    count: { $sum: 1 }
                 }
-            }
-        },
-        {
-            $group: {
-                _id: {
-                    year: '$_id.year',
-                    month: '$_id.month'
-                },
-                count: { $sum: 1 }
-            }
-        },
-        { $sort: { '_id.year': 1, '_id.month': 1 } }
+            },
+            { $sort: { '_id.year': 1, '_id.month': 1 } }
+        ]),
+        // 3. Patient Trend
+        Appointment.aggregate([
+            { $match: matchQuery },
+            {
+                $group: {
+                    _id: {
+                        year: { $year: { $ifNull: ['$appointmentDate', '$createdAt'] } },
+                        month: { $month: { $ifNull: ['$appointmentDate', '$createdAt'] } },
+                        patient: '$patient'
+                    }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        year: '$_id.year',
+                        month: '$_id.month'
+                    },
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { '_id.year': 1, '_id.month': 1 } }
+        ])
     ]);
 
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -93,23 +93,35 @@ const getTrendData = async (matchQuery) => {
 };
 
 const getSuperAdminSummary = async () => {
-    const totalHospitals = await Hospital.countDocuments();
-    const totalUsers = await Auth.countDocuments();
-    const totalDoctors = await Doctor.countDocuments();
-    
-    const totalAppointments = await Appointment.countDocuments();
-    const totalConsultations = await Consultation.countDocuments();
-    const totalPatients = await Patient.countDocuments();
-
-    const pendingAppointments = await Appointment.countDocuments({ status: 'pending' });
-    const confirmedAppointments = await Appointment.countDocuments({ status: 'confirmed' });
-    const completedAppointments = await Appointment.countDocuments({ status: 'completed' });
-    const cancelledAppointments = await Appointment.countDocuments({ status: 'cancelled' });
-
-    const recentHospitals = await Hospital.find().sort({ createdAt: -1 }).limit(5).select('hospitalName email phone address status createdAt');
-    const recentAppointments = await Appointment.find().sort({ createdAt: -1 }).limit(5).populate('patient', 'name').populate('doctor', 'name').populate('hospital', 'hospitalName');
-
-    const trends = await getTrendData({});
+    const [
+        totalHospitals,
+        totalUsers,
+        totalDoctors,
+        totalAppointments,
+        totalConsultations,
+        totalPatients,
+        pendingAppointments,
+        confirmedAppointments,
+        completedAppointments,
+        cancelledAppointments,
+        recentHospitals,
+        recentAppointments,
+        trends
+    ] = await Promise.all([
+        Hospital.countDocuments(),
+        Auth.countDocuments(),
+        Doctor.countDocuments(),
+        Appointment.countDocuments(),
+        Consultation.countDocuments(),
+        Patient.countDocuments(),
+        Appointment.countDocuments({ status: 'pending' }),
+        Appointment.countDocuments({ status: 'confirmed' }),
+        Appointment.countDocuments({ status: 'completed' }),
+        Appointment.countDocuments({ status: 'cancelled' }),
+        Hospital.find().sort({ createdAt: -1 }).limit(5).select('hospitalName email phone address status createdAt'),
+        Appointment.find().sort({ createdAt: -1 }).limit(5).populate('patient', 'name').populate('doctor', 'name').populate('hospital', 'hospitalName'),
+        getTrendData({})
+    ]);
 
     return {
         totalHospitals,
