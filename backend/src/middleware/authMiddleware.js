@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const env = require('../config/env');
 
 const authMiddleware = (req, res, next) => {
     try {
@@ -12,7 +13,8 @@ const authMiddleware = (req, res, next) => {
             return res.status(401).json({ error: 'Access denied. Token is empty.' });
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const jwtSecret = env.jwtSecret || process.env.JWT_SECRET;
+        const decoded = jwt.verify(token, jwtSecret);
         // Attach decoded user (id, role) to req.user
         req.user = {
             id: decoded.id || decoded.sub,

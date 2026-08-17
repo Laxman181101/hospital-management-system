@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const Razorpay = require('razorpay');
+const env = require('../../config/env');
 
 const Payment = require('./payment.model');
 const Invoice = require('./invoice.model');
@@ -14,8 +15,8 @@ const messagingService = require('../patient/messagingService');
 
 // Initialize Razorpay client
 const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY || 'rzp_test_StJNpcucdPt8Ja',
-    key_secret: process.env.RAZORPAY_SECRET || 'LfVmWXkO6fcuK8G41J9pqumy'
+    key_id: env.razorpayKeyId || process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY || '',
+    key_secret: env.razorpayKeySecret || process.env.RAZORPAY_KEY_SECRET || process.env.RAZORPAY_SECRET || ''
 });
 
 // ==========================================
@@ -92,7 +93,7 @@ const createOrder = async (req, res) => {
             orderId: order.id,
             amount: order.amount,
             currency: order.currency,
-            key: process.env.RAZORPAY_KEY || 'rzp_test_StJNpcucdPt8Ja',
+            key: env.razorpayKeyId || process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY || '',
             paymentId: savedPayment._id
         });
     } catch (err) {
@@ -115,7 +116,7 @@ const verifyPayment = async (req, res) => {
         // Verify signature using crypto
         const body = razorpayOrderId + '|' + razorpayPaymentId;
         const expectedSignature = crypto
-            .createHmac('sha256', process.env.RAZORPAY_SECRET || 'LfVmWXkO6fcuK8G41J9pqumy')
+            .createHmac('sha256', env.razorpayKeySecret || process.env.RAZORPAY_KEY_SECRET || process.env.RAZORPAY_SECRET || '')
             .update(body)
             .digest('hex');
 
