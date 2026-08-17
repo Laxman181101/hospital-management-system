@@ -20,14 +20,11 @@ services:
     restart: always
     ports:
       - "5000:5000"
+    env_file:
+      - ./backend/.env
     environment:
       - PORT=${PORT:-5000}
       - MONGODB_URI=${MONGODB_URI:-mongodb://mongodb:27017/hms-db}
-      - JWT_SECRET=${JWT_SECRET}
-      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
-      - SUPER_ADMIN_SECRET=${SUPER_ADMIN_SECRET}
-      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
-      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET}
       - NODE_ENV=${NODE_ENV:-production}
     depends_on:
       - mongodb

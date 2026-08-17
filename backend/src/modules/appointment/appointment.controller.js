@@ -13,9 +13,12 @@ const {
   updatePaymentStatusValidation,
 } = require("./appointment.validation");
 
+const keyId = env.razorpayKeyId || process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY || 'rzp_test_placeholder';
+const keySecret = env.razorpayKeySecret || process.env.RAZORPAY_KEY_SECRET || process.env.RAZORPAY_SECRET || 'placeholder_secret';
+
 const razorpay = new Razorpay({
-    key_id: env.razorpayKeyId,
-    key_secret: env.razorpayKeySecret
+    key_id: keyId,
+    key_secret: keySecret
 });
 
 // Book Appointment (HEAD version - local)

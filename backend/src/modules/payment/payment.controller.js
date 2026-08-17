@@ -13,10 +13,12 @@ const Doctor = require('../doctor/doctor.model');
 const receiptService = require('./receiptService');
 const messagingService = require('../patient/messagingService');
 
-// Initialize Razorpay client
+const keyId = env.razorpayKeyId || process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY || 'rzp_test_placeholder';
+const keySecret = env.razorpayKeySecret || process.env.RAZORPAY_KEY_SECRET || process.env.RAZORPAY_SECRET || 'placeholder_secret';
+
 const razorpay = new Razorpay({
-    key_id: env.razorpayKeyId || process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY || '',
-    key_secret: env.razorpayKeySecret || process.env.RAZORPAY_KEY_SECRET || process.env.RAZORPAY_SECRET || ''
+    key_id: keyId,
+    key_secret: keySecret
 });
 
 // ==========================================
