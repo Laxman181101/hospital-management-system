@@ -4,6 +4,7 @@ const Patient = require('../patient/patient.model');
 const Appointment = require('../appointment/appointment.model');
 const Doctor = require('../doctor/doctor.model');
 const Consultation = require('../consultation/consultation.model');
+const Payment = require('../payment/payment.model');
 
 const getTrendData = async (matchQuery) => {
     const [revenueTrendData, appointmentTrendData, patientTrendData] = await Promise.all([
@@ -358,8 +359,155 @@ const getCompleteDoctorDashboard = async (role, userId, hospitalId) => {
     };
 };
 
+const getSuperAdminAnalytics = async (queryParams = {}) => {
+    const { range, startDate, endDate } = queryParams;
+
+    const effectiveRevenueDate = { $ifNull: ['$paidAt', '$createdAt'] };
+    let dateMatchExpr = null;
+    const now = new Date();
+
+    if (startDate && endDate) {
+        dateMatchExpr = {
+            $expr: {
+                $and: [
+                    { $gte: [effectiveRevenueDate, new Date(startDate)] },
+                    { $lte: [effectiveRevenueDate, new Date(endDate)] }
+                ]
+            }
+        };
+    } else if (range === 'monthly' || !range) {
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(now.getMonth() - 6);
+        dateMatchExpr = {
+            $expr: { $gte: [effectiveRevenueDate, sixMonthsAgo] }
+        };
+    } else if (range === 'yearly') {
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        dateMatchExpr = {
+            $expr: { $gte: [effectiveRevenueDate, startOfYear] }
+        };
+    }
+
+    const paidMatch = {
+        status: { $in: ['paid', 'success'] },
+        ...(dateMatchExpr || {})
+    };
+
+    const [
+        totalHospitals,
+        activeHospitals,
+        inactiveHospitals,
+        totalRevenueResult,
+        totalPaymentsCount,
+        paymentStatusBreakdown,
+        revenueTrendRaw,
+        revenueByHospitalRaw
+    ] = await Promise.all([
+        Hospital.countDocuments(),
+        Hospital.countDocuments({ isActive: true }),
+        Hospital.countDocuments({ isActive: false }),
+        Payment.aggregate([
+            { $match: { status: { $in: ['paid', 'success'] } } },
+            { $group: { _id: null, total: { $sum: '$amount' } } }
+        ]),
+        Payment.countDocuments({ status: { $in: ['paid', 'success'] } }),
+        Payment.aggregate([
+            { $group: { _id: '$status', count: { $sum: 1 }, totalAmount: { $sum: '$amount' } } }
+        ]),
+        Payment.aggregate([
+            { $match: paidMatch },
+            {
+                $group: {
+                    _id: {
+                        year: { $year: effectiveRevenueDate },
+                        month: { $month: effectiveRevenueDate }
+                    },
+                    revenue: { $sum: '$amount' },
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { '_id.year': 1, '_id.month': 1 } }
+        ]),
+        Payment.aggregate([
+            { $match: paidMatch },
+            {
+                $lookup: {
+                    from: 'appointments',
+                    localField: 'appointment',
+                    foreignField: '_id',
+                    as: 'appointmentInfo'
+                }
+            },
+            { $unwind: { path: '$appointmentInfo', preserveNullAndEmptyArrays: true } },
+            {
+                $lookup: {
+                    from: 'hospitals',
+                    localField: 'appointmentInfo.hospital',
+                    foreignField: '_id',
+                    as: 'hospitalInfo'
+                }
+            },
+            { $unwind: { path: '$hospitalInfo', preserveNullAndEmptyArrays: true } },
+            {
+                $group: {
+                    _id: { $ifNull: ['$hospitalInfo._id', 'unassigned'] },
+                    hospitalName: { $first: { $ifNull: ['$hospitalInfo.hospitalName', 'Platform / General'] } },
+                    hospitalCode: { $first: { $ifNull: ['$hospitalInfo.code', 'N/A'] } },
+                    revenue: { $sum: '$amount' },
+                    transactionCount: { $sum: 1 }
+                }
+            },
+            { $sort: { revenue: -1 } },
+            { $limit: 10 }
+        ])
+    ]);
+
+    const totalRevenue = totalRevenueResult.length > 0 ? totalRevenueResult[0].total : 0;
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    const revenueOverview = revenueTrendRaw.map(item => ({
+        period: `${monthNames[item._id.month - 1]} ${item._id.year}`,
+        month: monthNames[item._id.month - 1],
+        year: item._id.year,
+        revenue: item.revenue,
+        count: item.count
+    }));
+
+    const statusDistribution = paymentStatusBreakdown.map(item => ({
+        status: item._id,
+        count: item.count,
+        totalAmount: item.totalAmount
+    }));
+
+    return {
+        summary: {
+            totalRevenue,
+            currency: 'INR',
+            currencySymbol: '₹',
+            totalHospitals,
+            activeHospitals,
+            inactiveHospitals,
+            totalPaymentsCount,
+            mrr: null,
+            arr: null,
+            mrrAvailable: false,
+            mrrMessage: 'Subscription billing data is not configured in current database schema.'
+        },
+        revenueOverview,
+        revenueByHospital: revenueByHospitalRaw.map(item => ({
+            hospitalId: item._id,
+            hospitalName: item.hospitalName,
+            hospitalCode: item.hospitalCode,
+            revenue: item.revenue,
+            transactionCount: item.transactionCount
+        })),
+        statusDistribution
+    };
+};
+
 module.exports = {
     getSuperAdminSummary,
+    getSuperAdminAnalytics,
     getHospitalAdminSummary,
     getDoctorSummary,
     getAppointmentStats,

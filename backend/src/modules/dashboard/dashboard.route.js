@@ -33,6 +33,25 @@ router.get(
 
 /**
  * @swagger
+ * /api/v1/dashboard/super-admin/analytics:
+ *   get:
+ *     summary: Get Super Admin Analytics
+ *     tags: [Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved platform analytics.
+ */
+router.get(
+    '/super-admin/analytics',
+    protect,
+    authorize('super_admin'),
+    dashboardController.getSuperAdminAnalytics
+);
+
+/**
+ * @swagger
  * /api/v1/dashboard/hospital-admin/summary:
  *   get:
  *     summary: Get Hospital Admin Summary

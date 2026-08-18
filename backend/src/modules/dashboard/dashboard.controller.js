@@ -9,6 +9,15 @@ const getSuperAdminSummary = async (req, res, next) => {
     }
 };
 
+const getSuperAdminAnalytics = async (req, res, next) => {
+    try {
+        const analytics = await dashboardService.getSuperAdminAnalytics(req.query);
+        res.status(200).json(analytics);
+    } catch (error) {
+        next(error);
+    }
+};
+
 const getHospitalAdminSummary = async (req, res, next) => {
     try {
         const summary = await dashboardService.getHospitalAdminSummary(req.user.sub);
@@ -74,6 +83,7 @@ const getCompleteDoctorDashboard = async (req, res, next) => {
 
 module.exports = {
     getSuperAdminSummary,
+    getSuperAdminAnalytics,
     getHospitalAdminSummary,
     getDoctorSummary,
     getAppointmentStats,

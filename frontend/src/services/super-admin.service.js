@@ -7,6 +7,12 @@ export const superAdminService = {
     return response.data;
   },
 
+  // Get Analytics (real database aggregation for super_admin)
+  getAnalytics: async (params = {}) => {
+    const response = await api.get('/api/v1/dashboard/super-admin/analytics', { params });
+    return response.data;
+  },
+
   // Get Revenue Stats
   getRevenueStats: async () => {
     const response = await api.get('/api/v1/payments/stats/revenue');
