@@ -25,6 +25,11 @@ export const superAdminService = {
     return response.data;
   },
 
+  getHospitals: async () => {
+    const response = await api.get('/api/v1/hospitals');
+    return response.data;
+  },
+
   // Get Pending Admins
   getPendingAdmins: async () => {
     const response = await api.get('/api/v1/auth/pending-admins');
