@@ -159,7 +159,7 @@ const registerStaff = async (adminHospitalId, staffData) => {
     return user;
 };
 
-const getStaff = async (hospitalId, queryParams) => {
+const getStaff = async (hospitalId, queryParams = {}) => {
     const filter = { role: { $in: ['doctor', 'receptionist', 'pharmacist', 'lab_technician', 'nurse', 'inventory_manager', 'financial_manager'] } };
 
     if (hospitalId) {
@@ -174,15 +174,26 @@ const getStaff = async (hospitalId, queryParams) => {
         filter.role = queryParams.role;
     }
 
+    if (queryParams.search) {
+        const searchRegex = new RegExp(queryParams.search, 'i');
+        filter.$or = [
+            { firstName: searchRegex },
+            { lastName: searchRegex },
+            { email: searchRegex }
+        ];
+    }
+
     if (queryParams.isProfileComplete !== undefined) {
         // queryParams are strings, so parse "false" and "true"
         filter.isProfileComplete = queryParams.isProfileComplete === 'true';
     }
 
-    // Do not send passwords in the response
-    const staffMembers = await Auth.find(filter).select('-password');
+    // Do not send passwords in the response and populate hospital affiliation details
+    const staffMembers = await Auth.find(filter)
+        .select('-password')
+        .populate('hospitalId', 'name code email phone city state');
 
-    // Build summary counts (always scoped to the hospital, ignoring role/isProfileComplete filters)
+    // Build summary counts (always scoped to the hospital if specified, ignoring role/isProfileComplete/search filters)
     const baseFilter = { 
         role: { $in: ['doctor', 'receptionist', 'pharmacist', 'lab_technician', 'nurse', 'inventory_manager', 'financial_manager'] }, 
         email: { $not: /^deleted_/ } 

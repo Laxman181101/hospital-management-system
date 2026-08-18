@@ -43,8 +43,18 @@ export const superAdminService = {
   },
 
   // Get Staff (platform wide for super_admin)
-  getStaff: async (hospitalId = '') => {
-    const query = hospitalId ? `?hospitalId=${hospitalId}` : '';
+  getStaff: async (params = {}) => {
+    let query = '';
+    if (typeof params === 'string') {
+      query = params ? `?hospitalId=${params}` : '';
+    } else if (params && typeof params === 'object') {
+      const searchParams = new URLSearchParams();
+      if (params.hospitalId) searchParams.append('hospitalId', params.hospitalId);
+      if (params.role) searchParams.append('role', params.role);
+      if (params.search) searchParams.append('search', params.search);
+      const queryString = searchParams.toString();
+      if (queryString) query = `?${queryString}`;
+    }
     const response = await api.get(`/api/v1/auth/staff${query}`);
     return response.data;
   }
