@@ -123,7 +123,7 @@ const StaffDirectory = () => {
               <option value="">All Hospitals</option>
               {hospitals.map((h) => (
                 <option key={h._id} value={h._id}>
-                  {h.name}
+                  {h.hospitalName || h.name || h.code}
                 </option>
               ))}
             </select>
@@ -159,8 +159,8 @@ const StaffDirectory = () => {
               ) : (
                 staff.map((member) => {
                   const hospitalName = typeof member.hospitalId === 'object' && member.hospitalId !== null
-                    ? member.hospitalId.name
-                    : (member.hospitalName || 'Platform Admin / Unassigned');
+                    ? (member.hospitalId.hospitalName || member.hospitalId.name || member.hospitalId.code || 'Hospital Affiliated')
+                    : (typeof member.hospitalId === 'string' && member.hospitalId ? (member.hospitalName || 'Hospital Affiliated') : 'Platform Admin / Unassigned');
 
                   return (
                     <tr key={member._id} className="hover:bg-slate-50/50 transition-colors cursor-pointer">

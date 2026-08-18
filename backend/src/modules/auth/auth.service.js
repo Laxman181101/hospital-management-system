@@ -1,4 +1,5 @@
 const Auth = require('./auth.model');
+const Hospital = require('../hospital/hospital.model');
 const env = require('../../config/env');
 const { generateToken, generateRefreshToken, verifyRefreshToken } = require('../../config/jwt');
 const crypto = require('crypto');
@@ -191,7 +192,7 @@ const getStaff = async (hospitalId, queryParams = {}) => {
     // Do not send passwords in the response and populate hospital affiliation details
     const staffMembers = await Auth.find(filter)
         .select('-password')
-        .populate('hospitalId', 'name code email phone city state');
+        .populate('hospitalId', 'hospitalName name code email phone city state');
 
     // Build summary counts (always scoped to the hospital if specified, ignoring role/isProfileComplete/search filters)
     const baseFilter = { 
@@ -228,7 +229,9 @@ const getStaffById = async (hospitalId, staffId) => {
         filter.hospitalId = hospitalId;
     }
 
-    const staff = await Auth.findOne(filter).select('-password');
+    const staff = await Auth.findOne(filter)
+        .select('-password')
+        .populate('hospitalId', 'hospitalName name code email phone city state');
     if (!staff) {
         throw new Error('Staff member not found or you do not have permission to view them');
     }
