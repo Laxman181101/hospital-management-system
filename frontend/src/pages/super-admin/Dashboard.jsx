@@ -3,7 +3,7 @@ import { ShieldCheck, Building2, Users, Activity, ArrowRight, Clock } from 'luci
 import { Link } from 'react-router-dom';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, Legend
+  BarChart, Bar
 } from 'recharts';
 import Card from '../../components/ui/Card';
 import Skeleton from '../../components/ui/Skeleton';
@@ -11,12 +11,23 @@ import EmptyState from '../../components/ui/EmptyState';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 
+const ROLE_LABELS = {
+  super_admin: 'Super Admin',
+  hospital_admin: 'Hospital Admin',
+  doctor: 'Doctor',
+  patient: 'Patient',
+  receptionist: 'Receptionist',
+  pharmacist: 'Pharmacist',
+  lab_technician: 'Lab Tech',
+  nurse: 'Nurse',
+  inventory_manager: 'Inventory Mgr',
+  financial_manager: 'Finance Mgr',
+};
+
 const SuperAdminDashboard = () => {
   const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState(null);
-  
-  // Pending approvals state (could be fetched from a specific endpoint if needed, for now we use an arbitrary zero or actual if available)
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
 
   useEffect(() => {
@@ -26,16 +37,14 @@ const SuperAdminDashboard = () => {
         const res = await api.get('/api/v1/dashboard/super-admin/summary');
         
         if (res.data) {
-          // Sometimes APIs wrap in 'data', sometimes they don't. Check both.
           setSummary(res.data.data || res.data);
         }
         
-        // Let's also fetch pending admins count just for the badge
         try {
           const adminsRes = await api.get('/api/v1/auth/pending-admins');
           setPendingApprovalsCount(adminsRes.data?.admins?.length || 0);
         } catch (err) {
-          // Ignore
+          // Ignore if optional check fails
         }
       } catch (error) {
         console.error('Error fetching super admin dashboard data:', error);
@@ -71,13 +80,14 @@ const SuperAdminDashboard = () => {
     totalUsers = 0,
     platformUsage = { totalPatients: 0 },
     recentHospitals = [],
-    patientTrend = [],
+    patientGrowth = [],
+    userDistribution = [],
   } = summary || {};
-  
-  const roleData = [
-    { name: 'Total Users', count: totalUsers },
-    { name: 'Doctors', count: summary?.totalDoctors || 0 },
-  ];
+
+  const roleChartData = (userDistribution || []).map(item => ({
+    name: ROLE_LABELS[item.role] || item.role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+    count: item.count || 0,
+  }));
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto animate-fade-in">
@@ -147,9 +157,9 @@ const SuperAdminDashboard = () => {
         <Card className="p-6">
           <h2 className="text-lg font-bold text-slate-800 mb-6">Patient Growth Trend</h2>
           <div className="h-72 w-full">
-            {patientTrend.length > 0 ? (
+            {patientGrowth.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={patientTrend}>
+                <AreaChart data={patientGrowth}>
                   <defs>
                     <linearGradient id="colorSignups" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
@@ -157,7 +167,7 @@ const SuperAdminDashboard = () => {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
+                  <XAxis dataKey="monthLabel" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
                   <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dx={-10} />
                   <Tooltip 
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
@@ -174,18 +184,22 @@ const SuperAdminDashboard = () => {
         <Card className="p-6">
           <h2 className="text-lg font-bold text-slate-800 mb-6">User Distribution</h2>
           <div className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={roleData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dx={-10} />
-                <Tooltip 
-                  cursor={{fill: '#f8fafc'}}
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                />
-                <Bar dataKey="count" fill="#2dd4bf" radius={[6, 6, 0, 0]} barSize={40} />
-              </BarChart>
-            </ResponsiveContainer>
+            {roleChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={roleChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11}} dy={10} interval={0} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dx={-10} />
+                  <Tooltip
+                    cursor={{fill: '#f8fafc'}}
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Bar dataKey="count" fill="#2dd4bf" radius={[6, 6, 0, 0]} barSize={36} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <EmptyState icon={Users} title="No User Data" description="No user distribution records found." className="h-full bg-transparent border-none" />
+            )}
           </div>
         </Card>
       </div>

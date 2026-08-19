@@ -107,6 +107,8 @@ const getSuperAdminSummary = async () => {
         cancelledAppointments,
         recentHospitals,
         recentAppointments,
+        userDistributionRaw,
+        patientGrowthRaw,
         trends
     ] = await Promise.all([
         Hospital.countDocuments(),
@@ -121,13 +123,58 @@ const getSuperAdminSummary = async () => {
         Appointment.countDocuments({ status: 'cancelled' }),
         Hospital.find().sort({ createdAt: -1 }).limit(5).select('hospitalName email phone address status createdAt'),
         Appointment.find().sort({ createdAt: -1 }).limit(5).populate('patient', 'name').populate('doctor', 'name').populate('hospital', 'hospitalName'),
+        Auth.aggregate([
+            {
+                $group: {
+                    _id: '$role',
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $sort: { count: -1 }
+            }
+        ]),
+        Patient.aggregate([
+            {
+                $group: {
+                    _id: {
+                        year: { $year: '$createdAt' },
+                        month: { $month: '$createdAt' }
+                    },
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $sort: {
+                    '_id.year': 1,
+                    '_id.month': 1
+                }
+            }
+        ]),
         getTrendData({})
     ]);
+
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    const userDistribution = userDistributionRaw.map(item => ({
+        role: item._id || 'unassigned',
+        count: item.count
+    }));
+
+    const patientGrowth = patientGrowthRaw.map(item => ({
+        year: item._id.year,
+        month: item._id.month,
+        monthLabel: `${monthNames[item._id.month - 1] || `Month ${item._id.month}`} ${item._id.year}`,
+        monthName: monthNames[item._id.month - 1] || `Month ${item._id.month}`,
+        count: item.count
+    }));
 
     return {
         totalHospitals,
         totalUsers,
         totalDoctors,
+        userDistribution,
+        patientGrowth,
         platformUsage: {
             totalAppointments,
             totalConsultations,
