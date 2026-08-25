@@ -13,6 +13,8 @@ const DoctorDashboard = () => {
   const [data, setData] = useState(null);
   const [todayAppointments, setTodayAppointments] = useState([]);
   const [ipdCount, setIpdCount] = useState(0);
+  const [upcomingAppointments, setUpcomingAppointments] = useState([]);
+  const [activeTab, setActiveTab] = useState('today');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -28,8 +30,18 @@ const DoctorDashboard = () => {
 
         // Fetch today's appointments for this doctor
         const today = new Date().toISOString().split('T')[0];
-        const apptsRes = await api.get(`/api/v1/appointments/doctor?date=${today}`);
+        const [apptsRes, allApptsRes] = await Promise.all([
+          api.get(`/api/v1/appointments/doctor?date=${today}`),
+          api.get('/api/v1/appointments/doctor')
+        ]);
+        
         setTodayAppointments(apptsRes.data.data || []);
+        
+        const all = allApptsRes.data.data || [];
+        setUpcomingAppointments(all);
+        if ((apptsRes.data.data || []).length === 0 && all.length > 0) {
+          setActiveTab('upcoming');
+        }
 
         // Fetch IPD admitted patients for this doctor
         try {
@@ -45,11 +57,12 @@ const DoctorDashboard = () => {
       } catch (err) {
         console.error('Failed to fetch doctor dashboard', err);
         setError(true);
-        // Still try to get appointments even if dashboard fails
         try {
           const today = new Date().toISOString().split('T')[0];
-          const apptsRes = await api.get(`/api/v1/appointments/doctor?date=${today}`);
-          setTodayAppointments(apptsRes.data.data || []);
+          const allRes = await api.get('/api/v1/appointments/doctor');
+          const all = allRes.data.data || [];
+          setUpcomingAppointments(all);
+          setTodayAppointments(all.filter(a => a.appointmentDate && a.appointmentDate.startsWith(today)));
         } catch (e2) {}
       } finally {
         setLoading(false);
@@ -59,13 +72,14 @@ const DoctorDashboard = () => {
   }, []);
 
   const stats = [
-    { label: "Today's Appointments", value: data?.dailyAppointments ?? todayAppointments.length, icon: Calendar, color: 'bg-indigo-100 text-indigo-600' },
-    { label: 'Pending Consultations', value: data?.pendingConsultations || 0, icon: Clock, color: 'bg-amber-100 text-amber-600' },
+    { label: "Today's Appointments", value: todayAppointments?.length || 0, icon: Calendar, color: 'bg-indigo-100 text-indigo-600' },
+    { label: 'Upcoming Bookings', value: upcomingAppointments?.length || 0, icon: Clock, color: 'bg-blue-100 text-blue-600' },
     { label: 'Total Patients', value: data?.patients?.totalPatients || 0, icon: Users, color: 'bg-emerald-100 text-emerald-600' },
-    { label: 'IPD Admitted', value: ipdCount, icon: Bed, color: 'bg-purple-100 text-purple-600' },
+    { label: 'IPD Admitted', value: ipdCount || 0, icon: Bed, color: 'bg-purple-100 text-purple-600' },
   ];
 
   const chartData = data?.appointmentTrend || [];
+  const displayList = (activeTab === 'today' ? todayAppointments : upcomingAppointments) || [];
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-8">
@@ -100,60 +114,106 @@ const DoctorDashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Today's Schedule */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-slate-800">Today's Schedule</h2>
-            <Link to="/doctor/appointments" className="text-sm font-medium text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
-              View All <ChevronRight size={16} />
+        {/* Schedule & Appointments */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            {/* Tabs */}
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl w-fit">
+              <button
+                type="button"
+                onClick={() => setActiveTab('today')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  activeTab === 'today'
+                    ? 'bg-white text-indigo-700 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Today's Schedule ({todayAppointments?.length || 0})
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('upcoming')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  activeTab === 'upcoming'
+                    ? 'bg-white text-indigo-700 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                All Bookings ({upcomingAppointments?.length || 0})
+              </button>
+            </div>
+
+            <Link to="/doctor/appointments" className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+              Go to Full Calendar <ChevronRight size={14} />
             </Link>
           </div>
 
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden border border-slate-100 shadow-sm">
             {loading ? (
               <div className="p-8 text-center text-slate-500 animate-pulse">Loading schedule...</div>
-            ) : todayAppointments.length > 0 ? (
+            ) : (displayList && displayList.length > 0) ? (
               <div className="divide-y divide-slate-100">
-                {todayAppointments.map(appt => (
-                  <div key={appt._id} className="p-4 hover:bg-slate-50 transition-colors flex items-center justify-between group">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center font-bold text-indigo-700">
-                        {appt.patient?.firstName?.charAt(0) || appt.patient?.name?.charAt(0) || 'P'}
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-slate-900 group-hover:text-indigo-700 transition-colors">
-                          {appt.patient?.firstName
-                            ? `${appt.patient.firstName} ${appt.patient.lastName || ''}`
-                            : appt.patient?.name || 'Unknown Patient'}
-                        </h4>
-                        <div className="text-sm text-slate-500 flex items-center gap-2 mt-1">
-                          <Clock size={14} className="text-indigo-400" /> {appt.startTime}
-                          <span className="text-slate-300">•</span>
-                          <span className="capitalize">{appt.appointmentType}</span>
+                {displayList.map(appt => {
+                  const isVirtual = ['video', 'chat', 'audio'].includes(appt.appointmentType || appt.type);
+                  const isPaid = appt.paymentStatus === 'paid' || appt.paymentStatus === 'success';
+                  const apptDateStr = appt.appointmentDate ? new Date(appt.appointmentDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
+                  
+                  return (
+                    <div key={appt._id} className="p-4 hover:bg-slate-50/80 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 group">
+                      <div className="flex items-center gap-3.5">
+                        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-sm shrink-0 ${
+                          appt.appointmentType === 'video' ? 'bg-purple-100 text-purple-700' :
+                          appt.appointmentType === 'chat' ? 'bg-amber-100 text-amber-700' :
+                          'bg-indigo-100 text-indigo-700'
+                        }`}>
+                          {appt.patient?.firstName?.charAt(0) || appt.patient?.name?.charAt(0) || 'P'}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-bold text-slate-900 group-hover:text-indigo-700 transition-colors text-sm">
+                              {appt.patient?.firstName
+                                ? `${appt.patient.firstName} ${appt.patient.lastName || ''}`
+                                : appt.patient?.name || 'Unknown Patient'}
+                            </h4>
+                            <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
+                              {appt.appointmentType || appt.type || 'physical'}
+                            </span>
+                          </div>
+                          <div className="text-xs text-slate-500 flex items-center gap-2 mt-1">
+                            <span className="font-medium text-slate-700">{apptDateStr}</span>
+                            <span className="text-slate-300">•</span>
+                            <span className="flex items-center gap-1"><Clock size={12} className="text-indigo-400" /> {appt.startTime}</span>
+                            <span className="text-slate-300">•</span>
+                            <span className={`font-semibold ${isPaid ? 'text-emerald-600' : 'text-amber-600'}`}>
+                              {isPaid ? 'Fee Paid' : 'Payment Pending'}
+                            </span>
+                          </div>
                         </div>
                       </div>
+
+                      <div className="flex items-center gap-2 self-end sm:self-center">
+                        <Badge status={appt.status} className="capitalize text-xs">{appt.status}</Badge>
+                        <Link to={isVirtual ? "/doctor/consultations" : "/doctor/appointments"}>
+                          <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs py-1.5 px-3 rounded-lg font-bold">
+                            {appt.appointmentType === 'video' ? 'Video Room' : appt.appointmentType === 'chat' ? 'Chat Room' : 'Start Visit'}
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      {(appt.paymentStatus === 'pending' || appt.paymentStatus === 'failed') && (
-                        <span className="text-xs bg-red-100 text-red-700 border border-red-200 px-2 py-1 rounded-full font-bold">
-                          Payment Pending
-                        </span>
-                      )}
-                      <Badge status={appt.status}>{appt.status}</Badge>
-                      <Link to="/doctor/consultations">
-                        <Button variant="outline" size="sm" className="hidden sm:inline-flex">Consult</Button>
-                      </Link>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="p-12 text-center">
                 <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100">
                   <Calendar className="text-slate-400" size={24} />
                 </div>
-                <h3 className="font-bold text-slate-900 mb-1">No appointments today</h3>
-                <p className="text-slate-500 text-sm">You have a clear schedule for the rest of the day.</p>
+                <h3 className="font-bold text-slate-900 mb-1">
+                  {activeTab === 'today' ? "No appointments today" : "No upcoming appointments"}
+                </h3>
+                <p className="text-slate-500 text-xs">
+                  {activeTab === 'today' ? "You have a clear schedule for today." : "No upcoming visits are scheduled."}
+                </p>
               </div>
             )}
           </Card>

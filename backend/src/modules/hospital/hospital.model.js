@@ -148,7 +148,7 @@ const hospitalSchema = new mongoose.Schema(
       supportedConsultations: {
         type: [String],
         enum: ['physical', 'video', 'audio', 'chat'],
-        default: ['physical']
+        default: ['physical', 'video', 'audio', 'chat']
       },
       operatingHours: {
         type: [{

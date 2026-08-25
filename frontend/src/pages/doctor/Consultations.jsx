@@ -1,14 +1,36 @@
 import React, { useState, useEffect } from 'react';
-import { Video, FileText, Calendar, Plus, X, Search, User, Bed, Activity, Download } from 'lucide-react';
+import { 
+  Video, 
+  FileText, 
+  Calendar, 
+  Plus, 
+  X, 
+  Search, 
+  User, 
+  Bed, 
+  Activity, 
+  Download, 
+  MessageSquare, 
+  Clock, 
+  PhoneCall, 
+  CheckCircle 
+} from 'lucide-react';
 import DataTable from '../../components/ui/DataTable';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
+import VideoRoomModal from '../../components/consultation/VideoRoomModal';
+import ChatRoomModal from '../../components/consultation/ChatRoomModal';
 import api from '../../services/api';
+import { getSocket } from '../../services/socket';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 
 const DoctorConsultations = () => {
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState('virtual'); // 'virtual' or 'history'
   const [history, setHistory] = useState([]);
+  const [virtualAppointments, setVirtualAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   
   const { addToast } = useToast();
@@ -16,21 +38,166 @@ const DoctorConsultations = () => {
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedHistory, setSelectedHistory] = useState(null);
 
-  const fetchData = async () => {
+  // Active Modals
+  const [activeVideoAppt, setActiveVideoAppt] = useState(null);
+  const [activeChatAppt, setActiveChatAppt] = useState(null);
+
+  const fetchHistory = async () => {
     try {
-      setLoading(true);
       const res = await api.get('/api/v1/consultations');
       setHistory(res.data.data || []);
     } catch (err) {
-      addToast('error', 'Failed to fetch consultations');
-    } finally {
-      setLoading(false);
+      console.error(err);
     }
   };
 
+  const fetchVirtualAppointments = async () => {
+    try {
+      const res = await api.get('/api/v1/appointments/doctor');
+      const all = res.data.data || [];
+      const virtual = all.filter(a => ['video', 'chat', 'audio'].includes(a.appointmentType));
+      setVirtualAppointments(virtual);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const loadData = async () => {
+    setLoading(true);
+    await Promise.all([fetchHistory(), fetchVirtualAppointments()]);
+    setLoading(false);
+  };
+
   useEffect(() => {
-    fetchData();
+    loadData();
   }, []);
+
+  const virtualColumns = [
+    {
+      header: 'Patient Info',
+      key: 'patient',
+      render: (row) => {
+        const patientName = `${row.patient?.firstName || ''} ${row.patient?.lastName || ''}`.trim() || 'Unknown Patient';
+        const initial = patientName.charAt(0).toUpperCase() || 'P';
+        return (
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold uppercase shadow-sm border border-indigo-100">
+              {initial}
+            </div>
+            <div>
+              <div className="font-bold text-slate-900">{patientName}</div>
+              <div className="text-xs text-slate-500">Gender: <span className="capitalize">{row.patient?.gender || 'N/A'}</span></div>
+            </div>
+          </div>
+        );
+      }
+    },
+    {
+      header: 'Consultation Mode',
+      key: 'appointmentType',
+      render: (row) => {
+        if (row.appointmentType === 'video') {
+          return (
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+              <Video size={13} />
+              <span>Video Consultation</span>
+            </div>
+          );
+        } else if (row.appointmentType === 'chat') {
+          return (
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+              <MessageSquare size={13} />
+              <span>Live Chat</span>
+            </div>
+          );
+        }
+        return (
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <PhoneCall size={13} />
+            <span>Audio Call</span>
+          </div>
+        );
+      }
+    },
+    {
+      header: 'Date & Time',
+      key: 'appointmentDate',
+      render: (row) => {
+        const d = new Date(row.appointmentDate);
+        return (
+          <div className="flex flex-col">
+            <span className="font-medium text-slate-800 flex items-center gap-1.5 text-xs">
+              <Calendar size={13} className="text-slate-400" />
+              {d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </span>
+            <span className="text-xs text-slate-500 mt-0.5 ml-4 flex items-center gap-1">
+              <Clock size={11} className="text-slate-400" />
+              {row.startTime} {row.endTime ? `- ${row.endTime}` : ''}
+            </span>
+          </div>
+        );
+      }
+    },
+    {
+      header: 'Status',
+      key: 'status',
+      render: (row) => <Badge status={row.status}>{row.status}</Badge>
+    },
+    {
+      header: 'Launch Consultation',
+      key: 'action',
+      align: 'right',
+      render: (row) => {
+        if (row.status === 'cancelled') {
+          return <span className="text-xs text-slate-400 font-medium">Cancelled</span>;
+        }
+
+        if (row.status === 'completed') {
+          return (
+            <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-lg">
+              Consulted ✓
+            </span>
+          );
+        }
+
+        return (
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              size="sm"
+              className={`text-xs py-1.5 px-4 font-semibold flex items-center gap-1.5 shadow-sm ${
+                row.appointmentType === 'video'
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200'
+                  : 'bg-purple-600 hover:bg-purple-700 text-white shadow-purple-200'
+              }`}
+              onClick={() => {
+                try {
+                  const s = getSocket();
+                  if (s) {
+                    s.emit('start_call', {
+                      toUserId: row.patient?._id || row.patient,
+                      patientUserIds: [row.patient?.user?._id, row.patient?.user, row.patient?._id],
+                      appointment: row,
+                      callerName: user ? `Dr. ${user.firstName} ${user.lastName || ''}`.trim() : 'Doctor',
+                      type: row.appointmentType
+                    });
+                  }
+                } catch (e) {}
+
+                if (row.appointmentType === 'video' || row.appointmentType === 'audio') {
+                  setActiveVideoAppt(row);
+                } else {
+                  setActiveChatAppt(row);
+                }
+              }}
+            >
+              {row.appointmentType === 'video' ? <Video size={14} /> : <MessageSquare size={14} />}
+              <span>{row.appointmentType === 'video' ? 'Start Video Call' : 'Open Live Chat'}</span>
+            </Button>
+          </div>
+        );
+      }
+    }
+  ];
 
   const historyColumns = [
     {
@@ -117,20 +284,90 @@ const DoctorConsultations = () => {
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Consultation History</h1>
-          <p className="text-sm text-slate-500 mt-1">Review past patient consultations, diagnosis, and clinical notes.</p>
+          <h1 className="text-2xl font-bold text-slate-900">Doctor Consultations Hub</h1>
+          <p className="text-sm text-slate-500 mt-1">Manage scheduled video/chat telehealth sessions and historical clinical notes.</p>
         </div>
       </div>
 
-      <div className="h-[500px]">
-        <DataTable 
-          columns={historyColumns} 
-          data={history} 
-          loading={loading}
-          emptyIcon={FileText}
-          emptyTitle="No consultation history"
-        />
+      {/* Tabs */}
+      <div className="flex items-center gap-3 border-b border-slate-200 pb-3">
+        <button
+          onClick={() => setActiveTab('virtual')}
+          className={`px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all ${
+            activeTab === 'virtual'
+              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          <Video size={16} />
+          Live Virtual Appointments
+          <span className={`px-2 py-0.5 rounded-full text-xs ${
+            activeTab === 'virtual' ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-slate-600'
+          }`}>
+            {virtualAppointments.length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('history')}
+          className={`px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all ${
+            activeTab === 'history'
+              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          <FileText size={16} />
+          Past Clinical Records
+          <span className={`px-2 py-0.5 rounded-full text-xs ${
+            activeTab === 'history' ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-slate-600'
+          }`}>
+            {history.length}
+          </span>
+        </button>
       </div>
+
+      {/* Tables based on tab */}
+      <div className="h-[520px]">
+        {activeTab === 'virtual' ? (
+          <DataTable 
+            columns={virtualColumns} 
+            data={virtualAppointments} 
+            loading={loading}
+            emptyIcon={Video}
+            emptyTitle="No virtual appointments scheduled"
+            emptyDescription="You have no upcoming video or chat consultations assigned at the moment."
+          />
+        ) : (
+          <DataTable 
+            columns={historyColumns} 
+            data={history} 
+            loading={loading}
+            emptyIcon={FileText}
+            emptyTitle="No consultation history"
+            emptyDescription="Completed consultation diagnosis records will appear here."
+          />
+        )}
+      </div>
+
+      {/* Video Meeting Room Modal */}
+      {activeVideoAppt && (
+        <VideoRoomModal
+          isOpen={Boolean(activeVideoAppt)}
+          onClose={() => setActiveVideoAppt(null)}
+          consultationData={activeVideoAppt}
+          onConsultationComplete={loadData}
+        />
+      )}
+
+      {/* Real-time Chat Room Modal */}
+      {activeChatAppt && (
+        <ChatRoomModal
+          isOpen={Boolean(activeChatAppt)}
+          onClose={() => setActiveChatAppt(null)}
+          consultationData={activeChatAppt}
+          onSessionEnd={loadData}
+        />
+      )}
 
       {/* View Consultation Modal */}
       {showViewModal && selectedHistory && (

@@ -314,12 +314,16 @@ const rescheduleAppointment = async (req, res, next) => {
 // UPDATE PAYMENT STATUS
 const updatePaymentStatus = async (req, res, next) => {
   try {
-    const { error } = updatePaymentStatusValidation.validate(req.body);
+    const { error } = updatePaymentStatusValidation.validate(req.body, { allowUnknown: true });
     if (error) {
       return res.status(400).json({ success: false, message: error.details[0].message });
     }
     const appointment = await appointmentService.updatePaymentStatus(
-      req.params.id, req.body.status, req.user.role, req.body.paymentMethod
+      req.params.id, req.body.status, req.user.role, req.body.paymentMethod, {
+        amount: req.body.amount,
+        transactionId: req.body.transactionId,
+        notes: req.body.notes
+      }
     );
     res.status(200).json({ success: true, message: "Payment status updated", data: appointment });
   } catch (error) {

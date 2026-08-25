@@ -28,11 +28,17 @@ import {
   Calendar,
   Video,
   CreditCard,
-  Stethoscope
+  Stethoscope,
+  PhoneCall,
+  PhoneIncoming,
+  MessageSquare
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { superAdminService } from '../../services/super-admin.service';
 import api from '../../services/api';
+import { getSocket, joinRoom } from '../../services/socket';
+import VideoRoomModal from '../consultation/VideoRoomModal';
+import ChatRoomModal from '../consultation/ChatRoomModal';
 
 const DashboardLayout = () => {
   const { user, logout } = useAuth();
@@ -42,7 +48,28 @@ const DashboardLayout = () => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [incomingCall, setIncomingCall] = useState(null);
+  const [activeCallAppt, setActiveCallAppt] = useState(null);
+  const [activeChatAppt, setActiveChatAppt] = useState(null);
   const location = useLocation();
+
+  useEffect(() => {
+    if (user) {
+      const uid = user.sub || user.id || user._id;
+      joinRoom(uid);
+
+      const s = getSocket();
+      if (s) {
+        const handleIncoming = (callData) => {
+          setIncomingCall(callData);
+        };
+        s.on('incoming_call', handleIncoming);
+        return () => {
+          s.off('incoming_call', handleIncoming);
+        };
+      }
+    }
+  }, [user]);
 
   useEffect(() => {
     if (user) {
@@ -387,6 +414,67 @@ const DashboardLayout = () => {
           <Outlet />
         </main>
       </div>
+
+      {/* Real-time Incoming Call Floating Alert */}
+      {incomingCall && (
+        <div className="fixed bottom-6 right-6 z-[999999] max-w-sm w-full bg-slate-900 text-white rounded-2xl shadow-2xl p-5 border border-slate-700 animate-in slide-in-from-bottom-5 duration-300">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-12 h-12 rounded-full bg-blue-600/30 border border-blue-400/40 text-blue-400 flex items-center justify-center shrink-0 animate-pulse">
+              <PhoneIncoming size={24} />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                <h4 className="font-bold text-slate-100 text-sm">Incoming Consultation</h4>
+              </div>
+              <p className="text-xs text-slate-300 mt-0.5 font-medium">
+                {incomingCall.callerName} is calling you for {incomingCall.type === 'video' ? 'Video Consultation' : 'Live Chat'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-2 mt-4">
+            <button
+              type="button"
+              onClick={() => setIncomingCall(null)}
+              className="flex-1 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+            >
+              Dismiss
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const appt = incomingCall.appointment;
+                setIncomingCall(null);
+                if (incomingCall.type === 'video' || incomingCall.type === 'audio') {
+                  setActiveCallAppt(appt);
+                } else {
+                  setActiveChatAppt(appt);
+                }
+              }}
+              className="flex-1 px-3 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors shadow-lg shadow-emerald-900/40 flex items-center justify-center gap-1.5"
+            >
+              <Video size={14} /> Accept & Join
+            </button>
+          </div>
+        </div>
+      )}
+
+      {activeCallAppt && (
+        <VideoRoomModal
+          isOpen={Boolean(activeCallAppt)}
+          onClose={() => setActiveCallAppt(null)}
+          consultationData={activeCallAppt}
+        />
+      )}
+
+      {activeChatAppt && (
+        <ChatRoomModal
+          isOpen={Boolean(activeChatAppt)}
+          onClose={() => setActiveChatAppt(null)}
+          consultationData={activeChatAppt}
+        />
+      )}
     </div>
   );
 };

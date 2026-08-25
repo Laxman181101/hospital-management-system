@@ -16,9 +16,9 @@ const createAppointment = async (data) => {
     const apptType = data.appointmentType || data.type || 'physical';
 
     // Layer 1: Hospital Configuration Check
-    if (doctorProfile.hospital && doctorProfile.hospital.settings) {
-        const supported = doctorProfile.hospital.settings.supportedConsultations || ['physical'];
-        if (!supported.includes(apptType)) {
+    if (doctorProfile.hospital && doctorProfile.hospital.settings && Array.isArray(doctorProfile.hospital.settings.supportedConsultations)) {
+        const supported = doctorProfile.hospital.settings.supportedConsultations;
+        if (supported.length > 0 && !supported.includes(apptType) && !(supported.length === 1 && supported[0] === 'physical')) {
             const err = new Error(`Hospital does not support ${apptType} consultations`);
             err.status = 400;
             throw err;
@@ -26,11 +26,13 @@ const createAppointment = async (data) => {
     }
 
     // Layer 2: Doctor Preference Check
-    const docSupported = doctorProfile.consultationModes || ['physical'];
-    if (!docSupported.includes(apptType)) {
-        const err = new Error(`Dr. ${doctorProfile.name} does not support ${apptType} consultations`);
-        err.status = 400;
-        throw err;
+    if (Array.isArray(doctorProfile.consultationModes)) {
+        const docSupported = doctorProfile.consultationModes;
+        if (docSupported.length > 0 && !docSupported.includes(apptType) && !(docSupported.length === 1 && docSupported[0] === 'physical')) {
+            const err = new Error(`Dr. ${doctorProfile.name || 'Doctor'} does not support ${apptType} consultations`);
+            err.status = 400;
+            throw err;
+        }
     }
 
     // Layer 3: Staff Leave Check
@@ -82,7 +84,13 @@ const createAppointment = async (data) => {
     }
 
     // CREATE
-    const appointment = await Appointment.create(data);
+    const bMode = data.bookingMode || (apptType === 'physical' ? 'walk-in' : 'online');
+    const appointment = await Appointment.create({
+        ...data,
+        appointmentType: apptType,
+        type: apptType,
+        bookingMode: bMode
+    });
 
     // --- NOTIFICATION TRIGGER ---
     try {
@@ -276,6 +284,14 @@ const updateAppointmentStatus =
     if (!isAdmin && !isDoctor) {
       const err = new Error(
         "Forbidden: Only doctors or admins can update appointment status"
+      );
+      err.status = 403;
+      throw err;
+    }
+
+    if (userRole === "receptionist" && status === "completed") {
+      const err = new Error(
+        "Only the attending doctor can mark a consultation as completed after the visit."
       );
       err.status = 403;
       throw err;
@@ -552,7 +568,7 @@ const rescheduleAppointment = async (appointmentId, data, userId, userRole) => {
 };
 
 // UPDATE PAYMENT STATUS
-const updatePaymentStatus = async (appointmentId, status, userRole, paymentMethod) => {
+const updatePaymentStatus = async (appointmentId, status, userRole, paymentMethod, transactionDetails = {}) => {
   const appointment = await Appointment.findById(appointmentId);
   if (!appointment) {
     const err = new Error("Appointment not found");
@@ -570,6 +586,15 @@ const updatePaymentStatus = async (appointmentId, status, userRole, paymentMetho
   appointment.paymentStatus = status;
   if (paymentMethod) {
     appointment.paymentMethod = paymentMethod;
+  }
+  if (transactionDetails.amount) {
+    appointment.consultationFee = transactionDetails.amount;
+  }
+  if (transactionDetails.transactionId) {
+    appointment.razorpayPaymentId = transactionDetails.transactionId;
+  }
+  if (transactionDetails.notes) {
+    appointment.notes = transactionDetails.notes;
   }
   await appointment.save();
   return appointment;

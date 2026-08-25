@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Search, Clock, Plus, X, User, MapPin, DollarSign, Filter, MoreVertical, CreditCard, RefreshCw, Eye, CheckCircle, XCircle, CheckSquare, Sun, Cloud, Moon } from 'lucide-react';
+import { Calendar, Search, Clock, Plus, X, User, MapPin, DollarSign, Filter, MoreVertical, CreditCard, RefreshCw, Eye, CheckCircle, XCircle, CheckSquare, Sun, Cloud, Moon, AlertCircle, QrCode, Copy, Check, Sparkles } from 'lucide-react';
 import DataTable from '../../components/ui/DataTable';
 import Badge from '../../components/ui/Badge';
 import Card from '../../components/ui/Card';
@@ -137,16 +137,52 @@ const ReceptionistAppointments = () => {
     }
   };
 
+  const [confirmPaymentMethod, setConfirmPaymentMethod] = useState('cash');
+  const [confirmFee, setConfirmFee] = useState(500);
+  const [cashReceived, setCashReceived] = useState('');
+  const [onlineTransactionId, setOnlineTransactionId] = useState('');
+  const [copiedUpi, setCopiedUpi] = useState(false);
+
   const openConfirmModal = (app) => {
     setSelectedAppointment(app);
+    const fee = app.doctor?.consultationFee || app.consultationFee || 500;
+    setConfirmFee(fee);
+    setCashReceived(fee.toString());
+    setOnlineTransactionId('');
+    setConfirmPaymentMethod(app.appointmentType !== 'physical' ? 'online' : 'cash');
     setIsConfirmModalOpen(true);
   };
 
   const handleConfirmAppointment = async () => {
     setSubmitting(true);
     try {
+      const isPaid = selectedAppointment.paymentStatus === 'paid' || selectedAppointment.paymentStatus === 'success';
+      if (!isPaid) {
+        const txId = confirmPaymentMethod === 'online' 
+          ? (onlineTransactionId.trim() || `UPI-${Date.now().toString().slice(-8)}`)
+          : `CASH-${Date.now().toString().slice(-6)}`;
+
+        const payPayload = {
+          status: 'paid',
+          paymentMethod: confirmPaymentMethod,
+          amount: Number(confirmFee) || 500,
+          transactionId: txId,
+          notes: `Consultation fee received via ${confirmPaymentMethod.toUpperCase()}`
+        };
+
+        await api.patch(`/api/v1/appointments/${selectedAppointment._id}/payment`, payPayload).catch(async (err) => {
+          if (err.response?.data?.message?.includes('amount') || err.response?.status === 400) {
+            return api.patch(`/api/v1/appointments/${selectedAppointment._id}/payment`, {
+              status: 'paid',
+              paymentMethod: confirmPaymentMethod
+            });
+          }
+          throw err;
+        });
+      }
+
       await api.patch(`/api/v1/appointments/${selectedAppointment._id}/status`, { status: 'confirmed' });
-      addToast('success', 'Appointment marked as confirmed');
+      addToast('success', isPaid ? 'Appointment confirmed successfully!' : `Payment of ₹${confirmFee} received & appointment confirmed!`);
       setIsConfirmModalOpen(false);
       fetchAppointments();
     } catch (err) {
@@ -269,14 +305,16 @@ const ReceptionistAppointments = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
+      const isOnline = formData.appointmentType !== 'physical';
       const payload = {
         ...formData,
+        type: formData.appointmentType,
         hospital: user?.hospitalId,
-        bookingMode: 'walk-in'
+        bookingMode: isOnline ? 'online' : 'walk-in'
       };
 
       await api.post('/api/v1/appointments', payload);
-      addToast('success', 'Walk-in appointment booked successfully');
+      addToast('success', `${isOnline ? 'Virtual' : 'Walk-in'} appointment booked successfully`);
       setIsModalOpen(false);
       fetchAppointments();
       
@@ -304,7 +342,7 @@ const ReceptionistAppointments = () => {
       startTime: app.startTime || '',
       endTime: app.endTime || '',
       patient: app.patient?._id || app.patient,
-      appointmentType: app.type || 'physical',
+      appointmentType: app.appointmentType || app.type || 'physical',
       reason: app.reason || ''
     });
     setIsRescheduleModalOpen(true);
@@ -365,16 +403,20 @@ const ReceptionistAppointments = () => {
     },
     {
       header: 'Type/Mode',
-      accessor: (row) => (
-        <div className="flex flex-col items-start gap-1">
-          <Badge variant={row.bookingMode === 'walk-in' ? 'info' : 'secondary'} className="text-[10px]">
-            {row.bookingMode || 'online'}
-          </Badge>
-          <Badge variant="outline" className="text-[10px]">
-            {row.type || 'physical'}
-          </Badge>
-        </div>
-      )
+      accessor: (row) => {
+        const apptType = row.appointmentType || row.type || 'physical';
+        const isVirtual = ['video', 'chat', 'audio'].includes(apptType);
+        return (
+          <div className="flex flex-col items-start gap-1">
+            <Badge variant={row.bookingMode === 'walk-in' ? 'info' : 'secondary'} className="text-[10px] capitalize">
+              {row.bookingMode || (isVirtual ? 'online' : 'walk-in')}
+            </Badge>
+            <Badge variant={isVirtual ? (apptType === 'video' ? 'info' : 'warning') : 'outline'} className="text-[10px] capitalize">
+              {apptType}
+            </Badge>
+          </div>
+        );
+      }
     },
     {
       header: 'Status',
@@ -400,14 +442,8 @@ const ReceptionistAppointments = () => {
           </button>
           
           {row.status === 'pending' && (
-            <button title="Confirm" className="p-2 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors" onClick={(e) => { e.stopPropagation(); openConfirmModal(row); }}>
+            <button title="Confirm & Collect Payment" className="p-2 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors" onClick={(e) => { e.stopPropagation(); openConfirmModal(row); }}>
               <CheckCircle size={18} />
-            </button>
-          )}
-
-          {row.status === 'confirmed' && (
-            <button title="Complete" className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" onClick={(e) => { e.stopPropagation(); handleUpdateStatus(row._id, 'completed'); }}>
-              <CheckSquare size={18} />
             </button>
           )}
 
@@ -846,8 +882,8 @@ const ReceptionistAppointments = () => {
 
               <div>
                 <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-2">Details</p>
-                <p className="text-sm text-slate-700"><span className="font-medium">Type:</span> {selectedAppointment.type || 'physical'}</p>
-                <p className="text-sm text-slate-700"><span className="font-medium">Mode:</span> {selectedAppointment.bookingMode || 'online'}</p>
+                <p className="text-sm text-slate-700 capitalize"><span className="font-medium">Type:</span> {selectedAppointment.appointmentType || selectedAppointment.type || 'physical'}</p>
+                <p className="text-sm text-slate-700 capitalize"><span className="font-medium">Mode:</span> {selectedAppointment.bookingMode || (['video', 'chat', 'audio'].includes(selectedAppointment.appointmentType || selectedAppointment.type) ? 'online' : 'walk-in')}</p>
                 <p className="text-sm text-slate-700 mt-2"><span className="font-medium">Reason:</span> {selectedAppointment.reason || 'Not provided'}</p>
               </div>
             </div>
@@ -902,20 +938,228 @@ const ReceptionistAppointments = () => {
 
       {/* Confirm Appointment Modal */}
       {isConfirmModalOpen && selectedAppointment && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
-            <div className="p-6 text-center pt-8">
-              <div className="w-16 h-16 bg-teal-100 text-teal-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle size={32} />
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-slate-100 max-h-[90vh]">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/80 flex justify-between items-center">
+              <div className="flex items-center gap-2.5">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                  selectedAppointment.paymentStatus === 'paid' || selectedAppointment.paymentStatus === 'success'
+                    ? 'bg-emerald-100 text-emerald-600'
+                    : 'bg-indigo-100 text-indigo-600'
+                }`}>
+                  {selectedAppointment.paymentStatus === 'paid' || selectedAppointment.paymentStatus === 'success' ? (
+                    <CheckCircle size={20} />
+                  ) : (
+                    <CreditCard size={20} />
+                  )}
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 text-base">
+                    {selectedAppointment.paymentStatus === 'paid' ? 'Confirm Appointment' : 'Payment Collection & Confirmation'}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    {selectedAppointment.paymentStatus === 'paid' ? 'Verify details to confirm booking' : 'Record consultation fee and confirm booking'}
+                  </p>
+                </div>
               </div>
-              <h2 className="text-xl font-bold text-slate-800 mb-2">Confirm Appointment?</h2>
-              <p className="text-sm text-slate-500 mb-1">Patient: <span className="font-medium text-slate-700">{selectedAppointment.patient?.name || (selectedAppointment.patient?.firstName ? selectedAppointment.patient.firstName + ' ' + selectedAppointment.patient.lastName : 'Unknown')}</span></p>
-              <p className="text-sm text-slate-500">Doctor: <span className="font-medium text-slate-700">Dr. {selectedAppointment.doctor?.name || (selectedAppointment.doctor?.user?.firstName ? selectedAppointment.doctor.user.firstName + ' ' + selectedAppointment.doctor.user.lastName : '')}</span></p>
+              <button 
+                onClick={() => setIsConfirmModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-200/60 transition-colors"
+              >
+                <X size={18} />
+              </button>
             </div>
-            <div className="p-6 border-t border-slate-100 bg-slate-50 flex gap-3">
-              <Button variant="outline" className="flex-1" onClick={() => setIsConfirmModalOpen(false)}>Back</Button>
-              <Button className="flex-1 bg-teal-600 hover:bg-teal-700" onClick={handleConfirmAppointment} disabled={submitting}>
-                {submitting ? 'Confirming...' : 'Yes, Confirm'}
+
+            <div className="p-6 overflow-y-auto space-y-4 text-xs">
+              {/* Summary Card */}
+              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-100 space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500">Patient</span>
+                  <span className="font-bold text-slate-900 text-sm">
+                    {selectedAppointment.patient?.name || (selectedAppointment.patient?.firstName ? `${selectedAppointment.patient.firstName} ${selectedAppointment.patient.lastName}` : 'Unknown')}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500">Doctor</span>
+                  <span className="font-semibold text-slate-800">
+                    Dr. {selectedAppointment.doctor?.name || selectedAppointment.doctor?.user?.firstName || 'Assigned'} ({selectedAppointment.doctor?.specialization || 'General'})
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500">Consultation Mode</span>
+                  <span className="font-semibold text-indigo-600 capitalize px-2 py-0.5 bg-indigo-50 rounded-md border border-indigo-100">
+                    {selectedAppointment.appointmentType || selectedAppointment.type || 'Physical'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500">Date & Slot</span>
+                  <span className="font-medium text-slate-700">
+                    {new Date(selectedAppointment.appointmentDate).toLocaleDateString()} at {selectedAppointment.startTime}
+                  </span>
+                </div>
+              </div>
+
+              {/* Payment Section (If not paid) */}
+              {selectedAppointment.paymentStatus !== 'paid' && selectedAppointment.paymentStatus !== 'success' ? (
+                <div className="space-y-4">
+                  {/* Fee Banner */}
+                  <div className="p-3.5 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-100 flex justify-between items-center">
+                    <div>
+                      <span className="text-[11px] font-semibold uppercase text-emerald-800 tracking-wider block">Doctor Consultation Fee</span>
+                      <span className="text-xs text-emerald-600">Standard charges for {selectedAppointment.appointmentType || 'Physical'} visit</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 font-bold text-xl text-emerald-700">
+                      <span>₹</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={confirmFee}
+                        onChange={(e) => {
+                          const val = Number(e.target.value) || 0;
+                          setConfirmFee(val);
+                          setCashReceived(val.toString());
+                        }}
+                        className="w-20 px-2 py-1 bg-white border border-emerald-300 rounded-lg text-emerald-900 font-bold text-base text-right focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Payment Method Selector */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-2">Select Payment Method</label>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => setConfirmPaymentMethod('cash')}
+                        className={`p-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
+                          confirmPaymentMethod === 'cash'
+                            ? 'border-teal-500 bg-teal-50 text-teal-800 ring-1 ring-teal-500 shadow-sm'
+                            : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <DollarSign size={16} />
+                        Cash Payment
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmPaymentMethod('online')}
+                        className={`p-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
+                          confirmPaymentMethod === 'online'
+                            ? 'border-teal-500 bg-teal-50 text-teal-800 ring-1 ring-teal-500 shadow-sm'
+                            : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <CreditCard size={16} />
+                        UPI / Online Transfer
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Cash Method UI */}
+                  {confirmPaymentMethod === 'cash' && (
+                    <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-3 animate-in fade-in duration-150">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">Cash Received (₹)</label>
+                          <input
+                            type="number"
+                            min={confirmFee}
+                            value={cashReceived}
+                            onChange={(e) => setCashReceived(e.target.value)}
+                            placeholder={confirmFee.toString()}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">Change Due to Patient</label>
+                          <div className="px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-800 font-bold text-sm">
+                            ₹{Math.max(0, (Number(cashReceived) || 0) - Number(confirmFee))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Online / UPI Method UI */}
+                  {confirmPaymentMethod === 'online' && (
+                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3.5 animate-in fade-in duration-150">
+                      <div className="flex items-center gap-4 bg-white p-3 rounded-lg border border-slate-200">
+                        {/* Dynamic Mock QR Code */}
+                        <div className="w-20 h-20 bg-slate-900 rounded-lg flex items-center justify-center text-white shrink-0 p-1">
+                          <QrCode size={64} className="text-white" />
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
+                            <span>Scan to pay ₹{confirmFee}</span>
+                            <Sparkles size={13} className="text-amber-500" />
+                          </div>
+                          <p className="text-[11px] text-slate-500">Supports GPay, PhonePe, Paytm, BHIM</p>
+                          <div className="flex items-center gap-1.5 pt-0.5">
+                            <span className="font-mono text-[11px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200 font-semibold">
+                              hospital.care@upi
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText('hospital.care@upi');
+                                setCopiedUpi(true);
+                                setTimeout(() => setCopiedUpi(false), 2000);
+                              }}
+                              className="text-[10px] text-indigo-600 hover:text-indigo-800 flex items-center gap-0.5"
+                            >
+                              {copiedUpi ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                              {copiedUpi ? 'Copied' : 'Copy'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                          Transaction ID / UTR Reference No. (Optional for record)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. UTR429817291837"
+                          value={onlineTransactionId}
+                          onChange={(e) => setOnlineTransactionId(e.target.value)}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white text-xs"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold shrink-0">
+                    <Check size={16} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-emerald-900 text-xs">Payment Already Completed</h4>
+                    <p className="text-[11px] text-emerald-700 mt-0.5">
+                      Fee payment of ₹{selectedAppointment.consultationFee || 500} is verified. You can proceed with confirming the appointment.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex gap-3">
+              <Button variant="outline" className="flex-1 text-xs" onClick={() => setIsConfirmModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                className="flex-1 bg-teal-600 hover:bg-teal-700 text-white text-xs shadow-md shadow-teal-500/20 font-bold py-2.5" 
+                onClick={handleConfirmAppointment} 
+                disabled={submitting}
+              >
+                {submitting 
+                  ? 'Processing...' 
+                  : selectedAppointment.paymentStatus === 'paid' || selectedAppointment.paymentStatus === 'success'
+                  ? 'Confirm Appointment' 
+                  : `Collect ₹${confirmFee} & Confirm`}
               </Button>
             </div>
           </div>

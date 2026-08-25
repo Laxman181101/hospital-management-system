@@ -2,7 +2,16 @@ const chatService = require('./chat-consultation.service');
 
 exports.createSession = async (req, res) => {
     try {
-        const session = await chatService.createSession(req.body);
+        const data = { ...req.body };
+        if (data.appointmentId && (!data.doctorId || !data.patientId)) {
+            const Appointment = require('../appointment/appointment.model');
+            const appt = await Appointment.findById(data.appointmentId);
+            if (appt) {
+                if (!data.doctorId) data.doctorId = appt.doctor;
+                if (!data.patientId) data.patientId = appt.patient;
+            }
+        }
+        const session = await chatService.createSession(data);
         res.status(201).json({
             message: 'Chat session created',
             data: session

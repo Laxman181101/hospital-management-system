@@ -47,7 +47,7 @@ const doctorSchema = new mongoose.Schema({
     consultationModes: {
         type: [String],
         enum: ['physical', 'video', 'audio', 'chat'],
-        default: ['physical']
+        default: ['physical', 'video', 'audio', 'chat']
     },
     qualifications: [{
         type: String

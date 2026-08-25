@@ -1,14 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, CheckCircle, XCircle, Search, Clock, MapPin, Activity, Video, FileText, Plus, X, User, Bed, Pill, Trash2, FlaskConical } from 'lucide-react';
+import { Calendar, CheckCircle, XCircle, Search, Clock, MapPin, Activity, Video, MessageSquare, FileText, Plus, X, User, Bed, Pill, Trash2, FlaskConical } from 'lucide-react';
 import DataTable from '../../components/ui/DataTable';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
+import VideoRoomModal from '../../components/consultation/VideoRoomModal';
+import ChatRoomModal from '../../components/consultation/ChatRoomModal';
 import api from '../../services/api';
+import { getSocket } from '../../services/socket';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 
 const DoctorAppointments = () => {
+  const { user } = useAuth();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeVideoAppt, setActiveVideoAppt] = useState(null);
+  const [activeChatAppt, setActiveChatAppt] = useState(null);
   const { addToast } = useToast();
   
   // Filters
@@ -249,12 +256,19 @@ const DoctorAppointments = () => {
     {
       header: 'Type',
       key: 'appointmentType',
-      render: (row) => (
-        <span className="flex items-center gap-1 capitalize text-slate-700">
-          {row.appointmentType === 'physical' ? <MapPin size={14} className="text-emerald-500" /> : <Activity size={14} className="text-blue-500" />}
-          {row.appointmentType}
-        </span>
-      )
+      render: (row) => {
+        if (row.appointmentType === 'video') {
+          return <span className="flex items-center gap-1 text-blue-600 font-semibold text-xs bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200"><Video size={13} /> Video</span>;
+        } else if (row.appointmentType === 'chat') {
+          return <span className="flex items-center gap-1 text-purple-600 font-semibold text-xs bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200"><MessageSquare size={13} /> Chat</span>;
+        }
+        return (
+          <span className="flex items-center gap-1 capitalize text-slate-700">
+            {row.appointmentType === 'physical' ? <MapPin size={14} className="text-emerald-500" /> : <Activity size={14} className="text-blue-500" />}
+            {row.appointmentType || 'Physical'}
+          </span>
+        );
+      }
     },
     {
       header: 'Status',
@@ -267,36 +281,80 @@ const DoctorAppointments = () => {
       key: 'action',
       align: 'right',
       render: (row) => {
+        const isVirtual = ['video', 'chat', 'audio'].includes(row.appointmentType);
+        const isActive = row.status === 'pending' || row.status === 'confirmed';
+
+        if (row.status === 'completed') {
+          return (
+            <div className="flex items-center justify-end gap-1.5">
+              <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg">
+                Consulted ✓
+              </span>
+            </div>
+          );
+        }
+
+        if (row.status === 'cancelled') {
+          return (
+            <div className="flex items-center justify-end">
+              <span className="text-xs text-slate-400 font-medium">Cancelled</span>
+            </div>
+          );
+        }
+
         return (
-          <div className="flex items-center justify-end gap-2">
-            {row.status !== 'cancelled' && (
-              <Button size="sm" onClick={() => handleStartConsultation(row)} className="bg-indigo-600 hover:bg-indigo-700">
+          <div className="flex items-center justify-end gap-1.5">
+            {isVirtual && isActive && (
+              <Button
+                size="sm"
+                className={`text-xs py-1 px-2.5 flex items-center gap-1 shadow-sm ${
+                  row.appointmentType === 'video'
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                    : 'bg-purple-600 hover:bg-purple-700 text-white'
+                }`}
+                onClick={() => {
+                  try {
+                    const s = getSocket();
+                    if (s) {
+                      s.emit('start_call', {
+                        toUserId: row.patient?._id || row.patient,
+                        patientUserIds: [row.patient?.user?._id, row.patient?.user, row.patient?._id],
+                        appointment: row,
+                        callerName: user ? `Dr. ${user.firstName} ${user.lastName || ''}`.trim() : 'Doctor',
+                        type: row.appointmentType
+                      });
+                    }
+                  } catch (e) {}
+
+                  if (row.appointmentType === 'video' || row.appointmentType === 'audio') {
+                    setActiveVideoAppt(row);
+                  } else {
+                    setActiveChatAppt(row);
+                  }
+                }}
+              >
+                {row.appointmentType === 'video' ? <Video size={13} /> : <MessageSquare size={13} />}
+                <span>{row.appointmentType === 'video' ? 'Start Call' : 'Chat'}</span>
+              </Button>
+            )}
+
+            {isActive && (
+              <Button size="sm" onClick={() => handleStartConsultation(row)} className="bg-indigo-600 hover:bg-indigo-700 text-xs py-1.5 px-3.5 text-white font-semibold shadow-sm">
                 Consult
               </Button>
             )}
-            {(row.status === 'pending' || row.status === 'confirmed') && (
-              <>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 px-2"
-                  onClick={() => handleUpdateStatus(row._id, 'completed')}
-                  title="Mark Completed"
-                >
-                  <CheckCircle size={16} />
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="text-red-600 border-red-200 hover:bg-red-50 px-2"
-                  onClick={() => handleUpdateStatus(row._id, 'cancelled')}
-                  title="Cancel Appointment"
-                >
-                  <XCircle size={16} />
-                </Button>
-              </>
+
+            {isActive && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="text-red-600 border-red-200 hover:bg-red-50 p-1.5"
+                onClick={() => handleUpdateStatus(row._id, 'cancelled')}
+                title="Cancel Appointment"
+              >
+                <XCircle size={15} />
+              </Button>
             )}
-            {row.status === 'cancelled' && <span className="text-sm text-slate-400">-</span>}
           </div>
         );
       }
@@ -695,6 +753,24 @@ const DoctorAppointments = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {activeVideoAppt && (
+        <VideoRoomModal
+          isOpen={Boolean(activeVideoAppt)}
+          onClose={() => setActiveVideoAppt(null)}
+          consultationData={activeVideoAppt}
+          onConsultationComplete={fetchAppointments}
+        />
+      )}
+
+      {activeChatAppt && (
+        <ChatRoomModal
+          isOpen={Boolean(activeChatAppt)}
+          onClose={() => setActiveChatAppt(null)}
+          consultationData={activeChatAppt}
+          onSessionEnd={fetchAppointments}
+        />
       )}
     </div>
   );

@@ -3,12 +3,22 @@ const ChatMessage = require('./chatMessage.model');
 const socketService = require('../../services/socket.service');
 
 const createSession = async (data) => {
-    // Check if active session already exists
-    let session = await ChatSession.findOne({
-        doctor: data.doctorId,
-        patient: data.patientId,
-        status: 'active'
-    });
+    // Check if active session already exists for this appointment or doctor/patient
+    let session = null;
+    if (data.appointmentId) {
+        session = await ChatSession.findOne({
+            appointmentId: data.appointmentId,
+            status: 'active'
+        });
+    }
+
+    if (!session && data.doctorId && data.patientId) {
+        session = await ChatSession.findOne({
+            doctor: data.doctorId,
+            patient: data.patientId,
+            status: 'active'
+        });
+    }
 
     if (!session) {
         session = await ChatSession.create({
@@ -55,11 +65,14 @@ const sendMessage = async (sessionId, senderId, senderModel, content, messageTyp
         messageType
     });
 
-    // Determine receiver based on who sent it
+    // Emit real-time event to the active session room
+    socketService.sendToRoom(`session_${sessionId}`, 'receive_message', message);
+
+    // Also determine receiver based on who sent it and send direct notification
     const receiverId = senderModel === 'Doctor' ? session.patient : session.doctor;
-    
-    // Emit real-time event using socket
-    socketService.sendToUser(receiverId, 'receive_message', message);
+    if (receiverId) {
+        socketService.sendToUser(receiverId, 'receive_message', message);
+    }
 
     return message;
 };

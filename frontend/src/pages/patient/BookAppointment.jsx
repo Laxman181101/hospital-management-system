@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, Clock, MapPin, Search, ChevronRight, CheckCircle2, User, Sun, Cloud, Moon, CalendarOff } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, MapPin, Search, ChevronRight, CheckCircle2, User, Sun, Cloud, Moon, CalendarOff, Video, MessageSquare, Phone, Building2 } from 'lucide-react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import Button from '../../components/ui/Button';
@@ -226,15 +226,29 @@ const BookAppointment = () => {
                   className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                 />
                 
-                <label className="block text-sm font-medium text-slate-700 mt-6 mb-2">Consultation Type</label>
+                <label className="block text-sm font-medium text-slate-700 mt-6 mb-2">Consultation Mode</label>
                 <div className="grid grid-cols-2 gap-3">
-                  {['physical', 'video'].map(type => (
+                  {[
+                    { id: 'physical', label: 'In-Clinic / Walk-in', icon: Building2, desc: 'Visit hospital in person' },
+                    { id: 'video', label: 'Video Consultation', icon: Video, desc: 'HD Live Video Call' },
+                    { id: 'chat', label: 'Chat Consultation', icon: MessageSquare, desc: 'Instant Live Messaging' },
+                    { id: 'audio', label: 'Audio Consultation', icon: Phone, desc: 'Voice Teleconsultation' }
+                  ].map(({ id, label, icon: Icon, desc }) => (
                     <button
-                      key={type}
-                      onClick={() => setAppointmentType(type)}
-                      className={`p-3 rounded-xl border text-sm font-medium capitalize transition-colors ${appointmentType === type ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}
+                      key={id}
+                      type="button"
+                      onClick={() => setAppointmentType(id)}
+                      className={`p-3 rounded-xl border text-left transition-all ${
+                        appointmentType === id 
+                          ? 'border-indigo-600 bg-indigo-50/70 ring-1 ring-indigo-600' 
+                          : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                      }`}
                     >
-                      {type}
+                      <div className="flex items-center gap-2 mb-1">
+                        <Icon size={16} className={appointmentType === id ? 'text-indigo-600' : 'text-slate-500'} />
+                        <span className="font-semibold text-xs text-slate-900">{label}</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500">{desc}</p>
                     </button>
                   ))}
                 </div>

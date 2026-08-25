@@ -1,11 +1,8 @@
 const createSessionValidation = (req, res, next) => {
-    const { patientId, doctorId } = req.body;
+    const { patientId, doctorId, appointmentId } = req.body;
     
-    if (!patientId) {
-        return res.status(400).json({ message: 'Patient ID is required' });
-    }
-    if (!doctorId) {
-        return res.status(400).json({ message: 'Doctor ID is required' });
+    if (!appointmentId && (!patientId || !doctorId)) {
+        return res.status(400).json({ message: 'Doctor ID and Patient ID (or Appointment ID) are required' });
     }
     
     next();

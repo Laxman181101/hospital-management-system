@@ -18,12 +18,16 @@ const StaffDashboard = () => {
   const [attendanceStatus, setAttendanceStatus] = useState('unknown'); 
   const [checkInTime, setCheckInTime] = useState(null);
   
+  const [allAppointments, setAllAppointments] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [filteredAppointments, setFilteredAppointments] = useState([]);
+  const [viewScope, setViewScope] = useState('today'); // 'today' or 'all'
   const [filterTab, setFilterTab] = useState('All');
   
   const [stats, setStats] = useState({
     todayCount: 0,
+    allCount: 0,
+    pendingConfirmations: 0,
     pendingCheckIns: 0,
     walkInsToday: 0,
     pendingBills: 0,
@@ -33,21 +37,20 @@ const StaffDashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
-    // In a real app, you might fetch attendance status on load
   }, []);
 
   useEffect(() => {
-    if (filterTab === 'All') setFilteredAppointments(appointments);
-    else if (filterTab === 'Pending') setFilteredAppointments(appointments.filter(a => a.status === 'pending'));
-    else if (filterTab === 'Confirmed') setFilteredAppointments(appointments.filter(a => a.status === 'confirmed'));
-    else if (filterTab === 'Completed') setFilteredAppointments(appointments.filter(a => a.status === 'completed'));
-  }, [filterTab, appointments]);
+    const baseList = viewScope === 'today' ? appointments : allAppointments;
+    if (filterTab === 'All') setFilteredAppointments(baseList);
+    else if (filterTab === 'Pending') setFilteredAppointments(baseList.filter(a => a.status === 'pending'));
+    else if (filterTab === 'Confirmed') setFilteredAppointments(baseList.filter(a => a.status === 'confirmed'));
+    else if (filterTab === 'Completed') setFilteredAppointments(baseList.filter(a => a.status === 'completed'));
+  }, [filterTab, viewScope, appointments, allAppointments]);
 
   const fetchDashboardData = async () => {
     setFetchingAppts(true);
     try {
       const today = new Date().toISOString().split('T')[0];
-      // Try to fetch all appointments, we will filter by today if the backend doesn't
       const res = await api.get(`/api/v1/appointments`);
       const allAppts = res.data.data || [];
       
@@ -57,14 +60,22 @@ const StaffDashboard = () => {
       });
 
       setAppointments(todayAppts);
+      setAllAppointments(allAppts);
+
+      if (todayAppts.length === 0 && allAppts.length > 0) {
+        setViewScope('all');
+      }
       
       // Compute stats
       setStats({
         todayCount: todayAppts.length,
+        allCount: allAppts.length,
+        pendingConfirmations: allAppts.filter(a => a.status === 'pending').length,
         pendingCheckIns: todayAppts.filter(a => a.status === 'confirmed').length,
         walkInsToday: todayAppts.filter(a => a.bookingMode === 'walk-in').length,
-        pendingBills: todayAppts.filter(a => a.paymentStatus === 'pending' || a.paymentStatus === 'unpaid').length,
-        pendingDischargeBills: 0
+        pendingBills: allAppts.filter(a => a.paymentStatus === 'pending' || a.paymentStatus === 'unpaid').length,
+        pendingDischargeBills: 0,
+        pendingDischargeRequests: 0
       });
       
       try {
@@ -152,7 +163,10 @@ const StaffDashboard = () => {
 
       {/* Top Stat Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
-        <Card className="p-6 flex items-center gap-4">
+        <Card 
+          className="p-6 flex items-center gap-4 cursor-pointer hover:shadow-md transition-all"
+          onClick={() => { setViewScope('today'); setFilterTab('All'); }}
+        >
           <div className="p-3 bg-indigo-50 rounded-lg text-indigo-600">
             <Calendar size={24} />
           </div>
@@ -162,13 +176,16 @@ const StaffDashboard = () => {
           </div>
         </Card>
         
-        <Card className="p-6 flex items-center gap-4">
+        <Card 
+          className={`p-6 flex items-center gap-4 cursor-pointer hover:shadow-md transition-all ${stats.pendingConfirmations > 0 ? 'bg-amber-50/60 border border-amber-200' : ''}`}
+          onClick={() => { setViewScope('all'); setFilterTab('Pending'); }}
+        >
           <div className="p-3 bg-orange-50 rounded-lg text-orange-600">
             <Clock size={24} />
           </div>
           <div>
-            <p className="text-sm text-slate-500 font-medium">Pending Check-ins</p>
-            <p className="text-2xl font-bold text-slate-900">{stats.pendingCheckIns}</p>
+            <p className="text-sm text-slate-500 font-medium">Pending Confirm</p>
+            <p className="text-2xl font-bold text-amber-600">{stats.pendingConfirmations}</p>
           </div>
         </Card>
 
@@ -226,15 +243,39 @@ const StaffDashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Card: Today's Schedule (left 2/3) */}
+        {/* Main Card: Appointments (left 2/3) */}
         <Card className="p-0 overflow-hidden lg:col-span-2 flex flex-col h-full border border-slate-200">
-          <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white">
-            <h2 className="text-xl font-bold text-slate-800">Today's Schedule</h2>
+          <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white">
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl w-fit">
+              <button
+                type="button"
+                onClick={() => setViewScope('today')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  viewScope === 'today'
+                    ? 'bg-white text-teal-700 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Today's Schedule ({stats.todayCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewScope('all')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  viewScope === 'all'
+                    ? 'bg-white text-teal-700 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                All Bookings ({stats.allCount})
+              </button>
+            </div>
+
             <div className="flex bg-slate-100 p-1 rounded-lg">
               {['All', 'Pending', 'Confirmed', 'Completed'].map(tab => (
                 <button
                   key={tab}
-                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${filterTab === tab ? 'bg-white text-teal-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${filterTab === tab ? 'bg-white text-teal-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
                   onClick={() => setFilterTab(tab)}
                 >
                   {tab}
@@ -253,13 +294,23 @@ const StaffDashboard = () => {
             ) : filteredAppointments.length === 0 ? (
               <div className="p-12 text-center flex flex-col items-center justify-center">
                 <CalendarCheck size={48} className="text-slate-300 mb-4" />
-                <p className="text-slate-500 font-medium">No appointments scheduled for today</p>
+                <p className="text-slate-500 font-medium">
+                  {viewScope === 'today' ? 'No appointments scheduled for today' : 'No bookings found in this category'}
+                </p>
+                {viewScope === 'today' && stats.allCount > 0 && (
+                  <button
+                    onClick={() => setViewScope('all')}
+                    className="mt-3 text-xs font-bold text-teal-700 hover:underline"
+                  >
+                    View All Upcoming Bookings ({stats.allCount})
+                  </button>
+                )}
               </div>
             ) : (
               <table className="w-full text-left border-collapse">
                 <thead className="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-200">
                   <tr>
-                    <th className="px-6 py-4">Time</th>
+                    <th className="px-6 py-4">Date & Time</th>
                     <th className="px-6 py-4">Patient & Doctor</th>
                     <th className="px-6 py-4">Status & Type</th>
                     <th className="px-6 py-4">Payment</th>
@@ -270,8 +321,10 @@ const StaffDashboard = () => {
                   {filteredAppointments.map(app => (
                     <tr key={app._id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4">
-                        <div className="font-semibold text-slate-900">{app.startTime}</div>
-                        <div className="text-xs text-slate-500">{app.endTime}</div>
+                        <div className="font-semibold text-slate-900 text-sm">
+                          {app.appointmentDate ? new Date(app.appointmentDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Today'}
+                        </div>
+                        <div className="text-xs text-slate-500">{app.startTime} {app.endTime ? `- ${app.endTime}` : ''}</div>
                       </td>
                       <td className="px-6 py-4">
                         <p className="font-medium text-slate-900">{app.patient?.name || (app.patient?.firstName ? app.patient.firstName + ' ' + app.patient.lastName : 'Unknown')}</p>
@@ -284,8 +337,8 @@ const StaffDashboard = () => {
                           <Badge variant={app.status === 'pending' ? 'warning' : app.status === 'confirmed' ? 'info' : app.status === 'completed' ? 'success' : 'danger'}>
                             {app.status}
                           </Badge>
-                          <Badge variant="outline" className="text-[10px]">
-                            {app.type || 'physical'}
+                          <Badge variant="outline" className="text-[10px] capitalize">
+                            {app.appointmentType || app.type || 'physical'}
                           </Badge>
                         </div>
                       </td>

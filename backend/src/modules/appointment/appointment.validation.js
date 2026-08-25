@@ -75,7 +75,10 @@ const updatePaymentStatusValidation =
       Joi.string()
         .valid("cash", "online")
         .optional(),
-  });
+    amount: Joi.number().optional(),
+    transactionId: Joi.string().allow('', null).optional(),
+    notes: Joi.string().allow('', null).optional()
+  }).unknown(true);
 
 module.exports = {
   createAppointmentValidation,
