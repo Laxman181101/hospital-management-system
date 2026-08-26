@@ -1,10 +1,11 @@
 const createConsultationValidation = (req, res, next) => {
-    const { patientId } = req.body;
+    const patientId = req.body.patientId || req.body.patient;
     
     if (!patientId) {
         return res.status(400).json({ message: 'Patient ID is required' });
     }
     
+    req.body.patientId = patientId;
     next();
 };
 

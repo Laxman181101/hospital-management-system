@@ -1,9 +1,12 @@
 const createPrescriptionValidation = (req, res, next) => {
-    const { patientId, medicines, patientType } = req.body;
+    const patientId = req.body.patientId || req.body.patient;
+    const { medicines, patientType } = req.body;
     
     if (!patientId) {
         return res.status(400).json({ message: 'Patient ID is required' });
     }
+    
+    req.body.patientId = patientId;
     
     // For IPD progress notes, medicines can be empty if it's just general instructions
     if (patientType !== 'IPD' && (!medicines || !Array.isArray(medicines) || medicines.length === 0)) {

@@ -160,9 +160,23 @@ const DoctorAppointments = () => {
       }
 
       // 2. Save Consultation
+      const rawPatient = selectedAppt.patient;
+      const targetPatientId = 
+        rawPatient?._id || 
+        (typeof rawPatient === 'string' ? rawPatient : '') || 
+        rawPatient?.user?._id || 
+        rawPatient?.user || 
+        selectedAppt.patientId;
+
+      if (!targetPatientId) {
+        addToast('error', 'Patient ID could not be identified');
+        return;
+      }
+
       let consultationRes = await api.post('/api/v1/consultations', {
         ...formData,
-        patientId: selectedAppt.patient?._id,
+        patientId: targetPatientId,
+        patient: targetPatientId,
         appointmentId: selectedAppt._id
       });
       
@@ -170,7 +184,8 @@ const DoctorAppointments = () => {
       const validMedicines = medicines.filter(m => m.name.trim() !== '');
       if (validMedicines.length > 0 || generalInstructions) {
         await api.post('/api/v1/prescriptions', {
-          patientId: selectedAppt.patient?._id,
+          patientId: targetPatientId,
+          patient: targetPatientId,
           consultationId: consultationRes?.data?.data?._id || consultationRes?.data?._id,
           generalInstructions,
           medicines: validMedicines.length > 0 ? validMedicines : undefined
@@ -181,7 +196,7 @@ const DoctorAppointments = () => {
       const validLabTests = prescribedLabTests.filter(t => t.testId);
       if (validLabTests.length > 0) {
         await api.post('/api/v1/laboratory/requests', {
-          patient: selectedAppt.patient?._id,
+          patient: targetPatientId,
           tests: validLabTests.map(t => t.testId),
           paymentStatus: 'Unpaid' // Default unpaid for OPD
         });
@@ -428,7 +443,15 @@ const DoctorAppointments = () => {
             <div className="flex items-center justify-between p-6 border-b border-slate-100 shrink-0">
               <div>
                 <h2 className="text-xl font-bold text-slate-900">Clinical Consultation & Prescription</h2>
-                <p className="text-sm text-slate-500">Patient: {selectedAppt.patient?.firstName} {selectedAppt.patient?.lastName}</p>
+                <p className="text-sm text-slate-500">
+                  Patient: <span className="font-semibold text-slate-800">
+                    {(selectedAppt.patient?.user ? `${selectedAppt.patient.user.firstName || ''} ${selectedAppt.patient.user.lastName || ''}`.trim() : '') ||
+                     (selectedAppt.patient?.firstName ? `${selectedAppt.patient.firstName} ${selectedAppt.patient.lastName || ''}`.trim() : '') ||
+                     selectedAppt.patient?.name ||
+                     selectedAppt.patientName ||
+                     'Patient'}
+                  </span>
+                </p>
               </div>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">
                 <X size={24} />
