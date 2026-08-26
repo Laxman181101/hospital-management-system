@@ -224,17 +224,36 @@ const DoctorAppointments = () => {
       header: 'Patient',
       key: 'patient',
       sortable: true,
-      render: (row) => (
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold shrink-0">
-            {row.patient?.firstName?.charAt(0) || 'P'}
+      render: (row) => {
+        const p = row.patient;
+        const patientName = 
+          (p?.user ? `${p.user.firstName || ''} ${p.user.lastName || ''}`.trim() : '') ||
+          (p?.firstName ? `${p.firstName} ${p.lastName || ''}`.trim() : '') ||
+          p?.name ||
+          row.patientName ||
+          row.name ||
+          'Patient';
+
+        const patientId = 
+          p?.uhid || 
+          p?.patientId || 
+          (p?._id ? p._id.toString().slice(-6).toUpperCase() : '') || 
+          (row._id ? row._id.toString().slice(-6).toUpperCase() : 'N/A');
+
+        const initial = patientName.charAt(0).toUpperCase() || 'P';
+
+        return (
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold shrink-0">
+              {initial}
+            </div>
+            <div>
+              <div className="font-bold text-slate-900">{patientName}</div>
+              <div className="text-sm text-slate-500">ID: {patientId}</div>
+            </div>
           </div>
-          <div>
-            <div className="font-bold text-slate-900">{row.patient?.firstName} {row.patient?.lastName}</div>
-            <div className="text-sm text-slate-500">ID: {row.patient?._id?.substring(row.patient._id.length - 6).toUpperCase()}</div>
-          </div>
-        </div>
-      )
+        );
+      }
     },
     {
       header: 'Date & Time',

@@ -77,7 +77,13 @@ const DoctorConsultations = () => {
       header: 'Patient Info',
       key: 'patient',
       render: (row) => {
-        const patientName = `${row.patient?.firstName || ''} ${row.patient?.lastName || ''}`.trim() || 'Unknown Patient';
+        const p = row.patient;
+        const patientName = 
+          (p?.user ? `${p.user.firstName || ''} ${p.user.lastName || ''}`.trim() : '') ||
+          (p?.firstName ? `${p.firstName} ${p.lastName || ''}`.trim() : '') ||
+          p?.name ||
+          row.patientName ||
+          'Patient';
         const initial = patientName.charAt(0).toUpperCase() || 'P';
         return (
           <div className="flex items-center gap-3">
@@ -86,7 +92,7 @@ const DoctorConsultations = () => {
             </div>
             <div>
               <div className="font-bold text-slate-900">{patientName}</div>
-              <div className="text-xs text-slate-500">Gender: <span className="capitalize">{row.patient?.gender || 'N/A'}</span></div>
+              <div className="text-xs text-slate-500">Gender: <span className="capitalize">{p?.gender || p?.user?.gender || 'N/A'}</span></div>
             </div>
           </div>
         );
@@ -204,7 +210,13 @@ const DoctorConsultations = () => {
       header: 'Patient Info',
       key: 'patient',
       render: (row) => {
-        const patientName = row.patient?.name || `${row.patient?.firstName || ''} ${row.patient?.lastName || ''}`.trim() || 'Unknown';
+        const p = row.patient;
+        const patientName = 
+          (p?.user ? `${p.user.firstName || ''} ${p.user.lastName || ''}`.trim() : '') ||
+          (p?.firstName ? `${p.firstName} ${p.lastName || ''}`.trim() : '') ||
+          p?.name ||
+          row.patientName ||
+          'Patient';
         const initial = patientName.charAt(0).toUpperCase() || 'P';
         return (
           <div className="flex items-center gap-3">

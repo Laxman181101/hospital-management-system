@@ -185,7 +185,14 @@ const getDoctorAppointments =
 
     const appointments =
       await Appointment.find(filter)
-        .populate("patient")
+        .populate({
+          path: "patient",
+          populate: { path: "user", select: "firstName lastName name email mobile" }
+        })
+        .populate({
+          path: "doctor",
+          populate: { path: "user", select: "firstName lastName name specialization profilePicture" }
+        })
         .populate("hospital")
         .sort({
           createdAt: -1,
@@ -497,8 +504,14 @@ const getAllAppointments = async (query = {}, user) => {
   }
 
   const appointments = await Appointment.find(filter)
-    .populate("patient")
-    .populate("doctor")
+    .populate({
+      path: "patient",
+      populate: { path: "user", select: "firstName lastName name email mobile" }
+    })
+    .populate({
+      path: "doctor",
+      populate: { path: "user", select: "firstName lastName name specialization profilePicture" }
+    })
     .populate("hospital")
     .sort({ createdAt: -1 });
 
@@ -508,8 +521,14 @@ const getAllAppointments = async (query = {}, user) => {
 // GET SINGLE APPOINTMENT
 const getAppointmentById = async (appointmentId) => {
   const appointment = await Appointment.findById(appointmentId)
-    .populate("patient")
-    .populate("doctor")
+    .populate({
+      path: "patient",
+      populate: { path: "user", select: "firstName lastName name email mobile" }
+    })
+    .populate({
+      path: "doctor",
+      populate: { path: "user", select: "firstName lastName name specialization profilePicture" }
+    })
     .populate("hospital");
 
   if (!appointment) {

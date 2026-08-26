@@ -166,14 +166,16 @@ const DoctorDashboard = () => {
                           appt.appointmentType === 'chat' ? 'bg-amber-100 text-amber-700' :
                           'bg-indigo-100 text-indigo-700'
                         }`}>
-                          {appt.patient?.firstName?.charAt(0) || appt.patient?.name?.charAt(0) || 'P'}
+                          {appt.patient?.user?.firstName?.charAt(0) || appt.patient?.firstName?.charAt(0) || appt.patient?.name?.charAt(0) || 'P'}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
                             <h4 className="font-bold text-slate-900 group-hover:text-indigo-700 transition-colors text-sm">
-                              {appt.patient?.firstName
-                                ? `${appt.patient.firstName} ${appt.patient.lastName || ''}`
-                                : appt.patient?.name || 'Unknown Patient'}
+                              {(appt.patient?.user ? `${appt.patient.user.firstName || ''} ${appt.patient.user.lastName || ''}`.trim() : '') ||
+                               (appt.patient?.firstName ? `${appt.patient.firstName} ${appt.patient.lastName || ''}`.trim() : '') ||
+                               appt.patient?.name ||
+                               appt.patientName ||
+                               'Patient'}
                             </h4>
                             <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
                               {appt.appointmentType || appt.type || 'physical'}
