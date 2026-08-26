@@ -185,10 +185,7 @@ const getDoctorAppointments =
 
     const appointments =
       await Appointment.find(filter)
-        .populate({
-          path: "patient",
-          populate: { path: "user", select: "firstName lastName name email mobile" }
-        })
+        .populate("patient")
         .populate({
           path: "doctor",
           populate: { path: "user", select: "firstName lastName name specialization profilePicture" }
@@ -197,6 +194,12 @@ const getDoctorAppointments =
         .sort({
           createdAt: -1,
         });
+
+    // Safely populate patient.user for Patient models without crashing Auth models
+    await Appointment.populate(appointments, {
+      path: "patient.user",
+      select: "firstName lastName name email mobile"
+    }).catch(() => {});
 
     return appointments;
   };
@@ -504,10 +507,7 @@ const getAllAppointments = async (query = {}, user) => {
   }
 
   const appointments = await Appointment.find(filter)
-    .populate({
-      path: "patient",
-      populate: { path: "user", select: "firstName lastName name email mobile" }
-    })
+    .populate("patient")
     .populate({
       path: "doctor",
       populate: { path: "user", select: "firstName lastName name specialization profilePicture" }
@@ -515,21 +515,30 @@ const getAllAppointments = async (query = {}, user) => {
     .populate("hospital")
     .sort({ createdAt: -1 });
 
+  await Appointment.populate(appointments, {
+    path: "patient.user",
+    select: "firstName lastName name email mobile"
+  }).catch(() => {});
+
   return appointments;
 };
 
 // GET SINGLE APPOINTMENT
 const getAppointmentById = async (appointmentId) => {
   const appointment = await Appointment.findById(appointmentId)
-    .populate({
-      path: "patient",
-      populate: { path: "user", select: "firstName lastName name email mobile" }
-    })
+    .populate("patient")
     .populate({
       path: "doctor",
       populate: { path: "user", select: "firstName lastName name specialization profilePicture" }
     })
     .populate("hospital");
+
+  if (appointment) {
+    await Appointment.populate(appointment, {
+      path: "patient.user",
+      select: "firstName lastName name email mobile"
+    }).catch(() => {});
+  }
 
   if (!appointment) {
     const err = new Error("Appointment not found");
