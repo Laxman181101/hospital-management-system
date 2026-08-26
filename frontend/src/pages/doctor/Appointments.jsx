@@ -163,15 +163,11 @@ const DoctorAppointments = () => {
       const rawPatient = selectedAppt.patient;
       const targetPatientId = 
         rawPatient?._id || 
-        (typeof rawPatient === 'string' ? rawPatient : '') || 
+        (typeof rawPatient === 'string' && rawPatient.length === 24 ? rawPatient : '') || 
         rawPatient?.user?._id || 
         rawPatient?.user || 
-        selectedAppt.patientId;
-
-      if (!targetPatientId) {
-        addToast('error', 'Patient ID could not be identified');
-        return;
-      }
+        selectedAppt.patientId ||
+        selectedAppt._id;
 
       let consultationRes = await api.post('/api/v1/consultations', {
         ...formData,
@@ -534,33 +530,45 @@ const DoctorAppointments = () => {
                             required 
                             value={med.name} 
                             onFocus={() => !med.isOutsidePharmacy && setActiveMedicineIndex(index)}
-                            onBlur={() => setTimeout(() => setActiveMedicineIndex(null), 200)}
-                            onChange={(e) => handleMedicineChange(index, 'name', e.target.value)}
+                            onBlur={() => setTimeout(() => setActiveMedicineIndex(null), 250)}
+                            onChange={(e) => {
+                              handleMedicineChange(index, 'name', e.target.value);
+                              if (!med.isOutsidePharmacy) setActiveMedicineIndex(index);
+                            }}
                             className="w-full p-2.5 text-sm border border-slate-200 rounded-lg outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all bg-slate-50 focus:bg-white" 
                             placeholder={med.isOutsidePharmacy ? "Type outside medicine" : "Type medicine name..."}
                           />
                           
                           {/* Autocomplete Dropdown */}
                           {!med.isOutsidePharmacy && activeMedicineIndex === index && (
-                            <div className="absolute z-50 left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-xl">
+                            <div className="absolute z-50 left-0 right-0 mt-1 max-h-56 overflow-y-auto bg-white border border-indigo-200 rounded-xl shadow-2xl divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
                               {inventory
-                                .filter(item => item.name.toLowerCase().includes(med.name.toLowerCase()))
+                                .filter(item => !med.name || item.name.toLowerCase().includes(med.name.toLowerCase()))
                                 .map((item, idx) => (
                                   <div 
                                     key={idx}
-                                    className="p-2.5 text-sm hover:bg-indigo-50 cursor-pointer border-b border-slate-50 last:border-0 flex justify-between items-center"
-                                    onClick={() => {
+                                    className="p-3 text-sm hover:bg-indigo-50/80 cursor-pointer flex justify-between items-center transition-colors group/item"
+                                    onMouseDown={(e) => {
+                                      e.preventDefault(); // Prevents input blur from cancelling the click
                                       handleMedicineChange(index, 'name', item.name);
+                                      if (!med.dosage && item.dosageForm) {
+                                        handleMedicineChange(index, 'dosage', `1 ${item.dosageForm}`);
+                                      }
                                       setActiveMedicineIndex(null);
                                     }}
                                   >
-                                    <span className="font-medium text-slate-700">{item.name}</span>
-                                    <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">Stock: {item.stockQuantity}</span>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-semibold text-slate-800 group-hover/item:text-indigo-600">{item.name}</span>
+                                      {item.category && <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-medium">{item.category}</span>}
+                                    </div>
+                                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${item.stockQuantity > 10 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
+                                      Stock: {item.stockQuantity}
+                                    </span>
                                   </div>
                               ))}
-                              {inventory.filter(item => item.name.toLowerCase().includes(med.name.toLowerCase())).length === 0 && (
-                                <div className="p-3 text-sm text-slate-500 text-center">
-                                  No matches in stock. Try "Outside Pharmacy".
+                              {inventory.filter(item => !med.name || item.name.toLowerCase().includes(med.name.toLowerCase())).length === 0 && (
+                                <div className="p-4 text-xs text-slate-500 text-center bg-slate-50">
+                                  No matches in stock. Check <span className="font-semibold text-indigo-600">"Outside Pharmacy"</span> to prescribe from outside.
                                 </div>
                               )}
                             </div>

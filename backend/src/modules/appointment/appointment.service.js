@@ -83,10 +83,41 @@ const createAppointment = async (data) => {
         throw err;
     }
 
+    // Resolve / Auto-create Patient document
+    const Patient = require('../patient/patient.model');
+    let targetPatientId = data.patient;
+    if (data.patient) {
+        let pDoc = await Patient.findOne({ $or: [{ _id: data.patient }, { user: data.patient }] });
+        if (!pDoc) {
+            const authDoc = await Auth.findById(data.patient);
+            if (authDoc) {
+                pDoc = new Patient({
+                    user: authDoc._id,
+                    firstName: authDoc.firstName || '',
+                    lastName: authDoc.lastName || '',
+                    name: `${authDoc.firstName || ''} ${authDoc.lastName || ''}`.trim() || 'Patient',
+                    email: authDoc.email,
+                    mobile: authDoc.mobile,
+                    gender: 'other',
+                    dateOfBirth: new Date('2000-01-01'),
+                    medicalHistory: [],
+                    appointments: [],
+                    reports: []
+                });
+                await pDoc.save();
+            }
+        }
+        if (pDoc) {
+            targetPatientId = pDoc._id;
+        }
+    }
+
     // CREATE
     const bMode = data.bookingMode || (apptType === 'physical' ? 'walk-in' : 'online');
     const appointment = await Appointment.create({
         ...data,
+        patient: targetPatientId,
+        patientModel: 'Patient',
         appointmentType: apptType,
         type: apptType,
         bookingMode: bMode

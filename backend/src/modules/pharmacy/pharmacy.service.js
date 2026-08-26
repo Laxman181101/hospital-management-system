@@ -83,21 +83,35 @@ const createOrder = async (hospitalId, pharmacistId, data) => {
         }
     }
 
-    const order = new PharmacyOrder({
-        patient: data.patient,
-        prescription: data.prescription,
-        ipdRound: data.ipdRound,
-        medicines: processedMedicines,
-        totalAmount,
-        status,
-        paymentStatus: data.paymentStatus || 'Unpaid',
-        paymentMethod: data.paymentMethod || 'Cash',
-        patientType: data.patientType || 'OPD',
-        pharmacist: pharmacistId,
-        hospitalId
-    });
+    let order = null;
+    if (data.prescription) {
+        order = await PharmacyOrder.findOne({ prescription: data.prescription, hospitalId });
+    }
 
-    await order.save();
+    if (order) {
+        order.medicines = processedMedicines;
+        order.totalAmount = totalAmount;
+        order.status = status;
+        order.paymentStatus = data.paymentStatus || 'Paid';
+        order.paymentMethod = data.paymentMethod || 'Cash';
+        order.pharmacist = pharmacistId;
+        await order.save();
+    } else {
+        order = new PharmacyOrder({
+            patient: data.patient,
+            prescription: data.prescription,
+            ipdRound: data.ipdRound,
+            medicines: processedMedicines,
+            totalAmount,
+            status,
+            paymentStatus: data.paymentStatus || 'Unpaid',
+            paymentMethod: data.paymentMethod || 'Cash',
+            patientType: data.patientType || 'OPD',
+            pharmacist: pharmacistId,
+            hospitalId
+        });
+        await order.save();
+    }
 
     // If this order is fulfilling an IPD round, mark the IPD round as dispensed
     if (data.ipdRound && status === 'Dispensed') {

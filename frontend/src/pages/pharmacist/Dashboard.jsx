@@ -81,7 +81,12 @@ const Dashboard = () => {
       header: 'Order Info', 
       accessor: (row) => (
         <div>
-          <p className="font-medium text-slate-800">{row.patient?.name || 'Unknown Patient'}</p>
+          <p className="font-medium text-slate-800">
+            {(row.patient?.user ? `${row.patient.user.firstName || ''} ${row.patient.user.lastName || ''}`.trim() : '') ||
+             (row.patient?.firstName ? `${row.patient.firstName} ${row.patient.lastName || ''}`.trim() : '') ||
+             row.patient?.name ||
+             'Patient'}
+          </p>
           <p className="text-xs text-slate-500">{new Date(row.createdAt).toLocaleDateString()}</p>
         </div>
       )

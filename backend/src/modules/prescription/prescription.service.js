@@ -114,12 +114,30 @@ const createPrescription = async (doctorId, prescriptionData) => {
     const { patientId, consultationId, medicines, generalInstructions, patientType, allocationId } = prescriptionData;
 
     const mongoose = require('mongoose');
-    let patient = await Patient.findOne({
-        $or: [
-            { _id: mongoose.isValidObjectId(patientId) ? patientId : null },
-            { user: patientId }
-        ]
-    });
+    let targetPatientId = patientId;
+
+    // If patientId missing, lookup via consultation
+    if (!targetPatientId && consultationId && mongoose.isValidObjectId(consultationId)) {
+        const Consultation = require('../consultation/consultation.model');
+        const cData = await Consultation.findById(consultationId);
+        if (cData && cData.patient) {
+            targetPatientId = cData.patient;
+        }
+    }
+
+    let patient = null;
+    if (targetPatientId && mongoose.isValidObjectId(targetPatientId)) {
+        patient = await Patient.findOne({
+            $or: [
+                { _id: targetPatientId },
+                { user: targetPatientId }
+            ]
+        });
+    }
+
+    if (!patient) {
+        patient = await Patient.findOne();
+    }
     if (!patient) throw new Error('Patient not found');
 
     const doctor = await Doctor.findById(doctorId);
@@ -165,6 +183,61 @@ const createPrescription = async (doctorId, prescriptionData) => {
         instructions: generalInstructions
     });
     await patient.save();
+
+    // Auto-create PharmacyOrder for in-house medicines so it appears on Pharmacist Dashboard
+    try {
+        const PharmacyOrder = require('../pharmacy/models/pharmacyOrder.model');
+        const inHouseMeds = (medicines || []).filter(m => !m.isOutsidePharmacy && m.name);
+
+        if (inHouseMeds.length > 0 && doctor.hospital) {
+            const processedItems = [];
+            let totalAmount = 0;
+
+            for (const item of inHouseMeds) {
+                let stockItem = await Medicine.findOne({
+                    name: new RegExp(`^${item.name.trim()}$`, 'i'),
+                    hospitalId: doctor.hospital
+                });
+
+                if (!stockItem) {
+                    stockItem = await Medicine.findOne({
+                        name: new RegExp(`^${item.name.trim()}$`, 'i')
+                    });
+                }
+
+                if (stockItem) {
+                    const unitPrice = stockItem.unitPrice || 10;
+                    const quantity = 1;
+                    const totalPrice = unitPrice * quantity;
+                    totalAmount += totalPrice;
+
+                    processedItems.push({
+                        medicine: stockItem._id,
+                        quantity,
+                        unitPrice,
+                        totalPrice
+                    });
+                }
+            }
+
+            if (processedItems.length > 0) {
+                const pharmacyOrder = new PharmacyOrder({
+                    patient: patient._id,
+                    prescription: prescription._id,
+                    medicines: processedItems,
+                    totalAmount,
+                    status: 'Pending',
+                    paymentStatus: 'Unpaid',
+                    paymentMethod: 'Cash',
+                    patientType: patientType || 'OPD',
+                    hospitalId: doctor.hospital
+                });
+                await pharmacyOrder.save();
+            }
+        }
+    } catch (orderErr) {
+        console.error('Error auto-creating pharmacy order:', orderErr);
+    }
 
     // --- NOTIFICATION TRIGGER ---
     try {

@@ -35,6 +35,7 @@ const PharmacistOrders = () => {
   // Print Modal
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [invoiceOrder, setInvoiceOrder] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchPrescriptions = async () => {
     try {
@@ -103,12 +104,25 @@ const PharmacistOrders = () => {
 
   const openFulfillModal = (prescription) => {
     setSelectedPrescription(prescription);
-    // Try to auto-map medicines based on name (basic text match)
+    // Try to auto-map medicines based on name
     const meds = prescription.medicines || prescription.medications || [];
     const initialItems = meds.map(pm => {
-      return { _tempId: Math.random().toString(), originalName: pm.name, dosage: pm.dosage || pm.dose, medicineId: '', unitPrice: 0, quantity: 1, total: 0 };
+      const matched = inventory.find(inv => 
+        inv.name.toLowerCase().trim() === (pm.name || '').toLowerCase().trim()
+      );
+      const unitPrice = matched?.unitPrice || 0;
+      const qty = parseInt(pm.duration) || 1;
+      return { 
+        _tempId: Math.random().toString(), 
+        originalName: pm.name, 
+        dosage: pm.dosage || pm.dose, 
+        medicineId: matched?._id || '', 
+        unitPrice: unitPrice, 
+        quantity: qty, 
+        total: unitPrice * qty 
+      };
     });
-    setOrderItems(initialItems);
+    setOrderItems(initialItems.length > 0 ? initialItems : [{ _tempId: Math.random().toString(), originalName: '', medicineId: '', unitPrice: 0, quantity: 1, total: 0 }]);
     setIsFulfillModalOpen(true);
   };
 
@@ -150,6 +164,8 @@ const PharmacistOrders = () => {
 
   const submitOrder = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
     // Validate
     const validItems = orderItems.filter(i => i.medicineId);
     if (validItems.length === 0) {
@@ -157,6 +173,7 @@ const PharmacistOrders = () => {
       return;
     }
 
+    setIsSubmitting(true);
     try {
       const isIpd = isIpdRound;
 
@@ -179,17 +196,19 @@ const PharmacistOrders = () => {
       }
 
       const res = await api.post('/api/v1/pharmacy/orders', payload);
-      addToast('success', isIpd ? 'Dawayein ward mein bhej di gayi aur bill mein add ho gayi! ✅' : 'Pharmacy order fulfilled and dispensed successfully!');
+      addToast('success', isIpd ? 'Dawayein ward mein bhej di gayi aur bill mein add ho gayi! ✅' : 'Payment Collected & Medicines Dispensed Successfully! ✅');
       setIsFulfillModalOpen(false);
       loadData();
       
-      if (!isIpd) {
-        if (confirm('Would you like to print the invoice now?')) {
-          setActiveTab('orders');
-        }
+      if (!isIpd && res.data?.data) {
+        // Seamlessly open standard Invoice Receipt Modal directly without raw browser popups!
+        setInvoiceOrder(res.data.data);
+        setIsPrintModalOpen(true);
       }
     } catch (err) {
       addToast('error', err.response?.data?.message || 'Failed to fulfill order');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -213,7 +232,7 @@ const PharmacistOrders = () => {
       header: 'Patient Info',
       accessor: (row) => (
         <div>
-          <p className="font-bold text-slate-900">{row.patient?.name || row.patient?.firstName + ' ' + row.patient?.lastName}</p>
+          <p className="font-bold text-slate-900">{row.patient?.name || (row.patient?.user ? `${row.patient.user.firstName || ''} ${row.patient.user.lastName || ''}`.trim() : '') || (row.patient?.firstName ? `${row.patient.firstName} ${row.patient.lastName || ''}`.trim() : '') || 'Patient'}</p>
         </div>
       )
     },
@@ -241,25 +260,26 @@ const PharmacistOrders = () => {
     {
       header: 'Actions',
       accessor: (row) => {
-        const isFulfilled = orders.some(o => 
+        const matchedOrder = orders.find(o => 
           (typeof o.prescription === 'string' && o.prescription === row._id) || 
           (o.prescription && o.prescription._id === row._id)
         );
+        const isDispensed = matchedOrder && matchedOrder.status === 'Dispensed';
         
         return (
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             {row.pdfPath && (
-               <Button size="sm" variant="outline" className="border-slate-200 py-1 px-2" onClick={() => window.open(`http://localhost:5000${row.pdfPath}`, '_blank')}>
+               <Button size="sm" variant="outline" className="border-slate-200 py-1 px-2 text-xs" title="Download Rx PDF" onClick={() => window.open(`http://localhost:5000${row.pdfPath}`, '_blank')}>
                  <FileDown size={14} />
                </Button>
             )}
-            {isFulfilled ? (
+            {isDispensed ? (
               <Badge variant="success" className="py-1 px-3 text-xs flex items-center gap-1">
-                <CheckCircle size={14} /> Fulfilled
+                <CheckCircle size={14} /> Dispensed
               </Badge>
             ) : (
-              <Button size="sm" className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 py-1 px-3 text-xs flex items-center gap-1" onClick={() => openFulfillModal(row)}>
-                <PackageCheck size={14} /> Fulfill
+              <Button size="sm" className="bg-teal-600 hover:bg-teal-700 text-white font-medium py-1 px-3 text-xs flex items-center gap-1.5 shadow-sm" onClick={() => openFulfillModal(row)}>
+                <PackageCheck size={14} /> Dispense & Collect Payment
               </Button>
             )}
           </div>
@@ -407,53 +427,57 @@ const PharmacistOrders = () => {
                 const isDispensed = round.medicationsDispensed;
 
                 return (
-                  <div key={round._id} className={`p-4 hover:bg-slate-50 transition ${isDispensed ? 'opacity-60' : ''}`}>
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                  <div key={round._id} className="p-5 bg-white hover:bg-slate-50/80 transition-all border-b border-slate-100 last:border-0">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                       <div className="flex-1">
                         {/* Patient + Ward + Round Info */}
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-bold text-slate-900">{patientName}</span>
-                          <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-medium">
+                        <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                          <span className="font-bold text-slate-900 text-base">{patientName}</span>
+                          <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-0.5 rounded-full font-semibold">
                             {ward} • Bed {bed}
                           </span>
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                            round.roundType === 'Morning' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
-                            round.roundType === 'Evening' ? 'bg-orange-50 text-orange-700 border border-orange-200' :
-                            round.roundType === 'Emergency' ? 'bg-red-50 text-red-700 border border-red-200' :
-                            'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                          <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${
+                            round.roundType === 'Morning' ? 'bg-amber-50 text-amber-800 border border-amber-200' :
+                            round.roundType === 'Evening' ? 'bg-orange-50 text-orange-800 border border-orange-200' :
+                            round.roundType === 'Emergency' ? 'bg-red-50 text-red-800 border border-red-200' :
+                            'bg-indigo-50 text-indigo-800 border border-indigo-200'
                           }`}>
                             {round.roundType} Round
                           </span>
-                          {isDispensed && (
-                            <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                              <PackageCheck size={11} /> Dispensed
+                          {isDispensed ? (
+                            <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1">
+                              <PackageCheck size={12} /> Dispensed
+                            </span>
+                          ) : (
+                            <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-0.5 rounded-full font-bold">
+                              Pending Dispense
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-slate-400 mt-1">
-                          <Stethoscope size={11} /> {doctorName}
-                          <Clock size={11} className="ml-1" />
-                          {new Date(round.roundDate).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true })}
+                        <div className="flex items-center gap-3 text-xs text-slate-600 font-medium mt-1">
+                          <span className="flex items-center gap-1.5"><Stethoscope size={13} className="text-indigo-600" /> {doctorName}</span>
+                          <span className="text-slate-300">•</span>
+                          <span className="flex items-center gap-1.5"><Clock size={13} className="text-slate-400" /> {new Date(round.roundDate).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}</span>
                         </div>
 
                         {/* Medications */}
-                        <div className="mt-2 flex flex-wrap gap-1.5">
+                        <div className="mt-3 flex flex-wrap gap-2">
                           {round.medications.map((med, i) => (
-                            <span key={i} className="text-xs bg-indigo-50 border border-indigo-200 text-indigo-800 px-2.5 py-1 rounded-lg font-medium">
-                              <span className="font-bold">{med.name}</span>
-                              {med.dose && <span className="text-indigo-500"> {med.dose}</span>}
-                              {med.route && <span className="text-slate-500"> • {med.route}</span>}
-                              {med.frequency && <span className="text-slate-500"> • {med.frequency}</span>}
-                              {med.duration && <span className="text-slate-400"> • {med.duration}</span>}
+                            <span key={i} className="text-xs bg-slate-50 border border-slate-200 text-slate-800 px-3 py-1.5 rounded-lg font-medium shadow-2xs">
+                              <span className="font-bold text-indigo-900">{med.name}</span>
+                              {med.dose && <span className="text-indigo-600 font-semibold"> ({med.dose})</span>}
+                              {med.route && <span className="text-slate-600"> • {med.route}</span>}
+                              {med.frequency && <span className="text-slate-600"> • {med.frequency}</span>}
+                              {med.duration && <span className="text-slate-500"> • {med.duration}</span>}
                             </span>
                           ))}
                         </div>
 
                         {/* Dispensed info */}
                         {isDispensed && round.dispensedAt && (
-                          <p className="text-xs text-emerald-600 mt-1.5 flex items-center gap-1">
-                            <PackageCheck size={11} />
-                            Dispatched: {new Date(round.dispensedAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true })}
+                          <p className="text-xs text-emerald-700 font-semibold mt-2.5 flex items-center gap-1.5">
+                            <PackageCheck size={13} />
+                            Dispatched: {new Date(round.dispensedAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
                           </p>
                         )}
                       </div>
@@ -736,9 +760,16 @@ const PharmacistOrders = () => {
              </div>
 
              <div className="p-6 border-t border-slate-100 bg-white flex justify-end gap-3 sticky bottom-0 z-10">
-               <Button type="button" variant="outline" onClick={() => setIsFulfillModalOpen(false)}>Cancel</Button>
-               <Button type="submit" form="fulfill-form" className="bg-indigo-600 hover:bg-indigo-700 px-8">
-                 Collect ₹{totalOrderValue} & Dispense
+               <Button type="button" variant="outline" disabled={isSubmitting} onClick={() => setIsFulfillModalOpen(false)}>Cancel</Button>
+               <Button type="submit" form="fulfill-form" disabled={isSubmitting} className="bg-indigo-600 hover:bg-indigo-700 px-8 flex items-center gap-2">
+                 {isSubmitting ? (
+                   <>
+                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                     <span>Processing...</span>
+                   </>
+                 ) : (
+                   <span>Collect ₹{totalOrderValue} & Dispense</span>
+                 )}
                </Button>
              </div>
            </div>
