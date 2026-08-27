@@ -3,9 +3,6 @@ import { getTokens, setTokens, clearTokens } from '../utils/tokenStorage';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000',
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
 let isRefreshing = false;
