@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import Cropper from 'react-easy-crop';
 import { X, ZoomIn, ZoomOut, Save } from 'lucide-react';
 import getCroppedImg from '../../utils/cropImage';
@@ -30,8 +31,8 @@ const ImageCropper = ({ imageSrc, onSave, onCancel, aspect = 1 }) => {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4">
+  const modalContent = (
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col h-[600px] max-h-[90vh]">
         
         {/* Header */}
@@ -95,6 +96,8 @@ const ImageCropper = ({ imageSrc, onSave, onCancel, aspect = 1 }) => {
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default ImageCropper;
