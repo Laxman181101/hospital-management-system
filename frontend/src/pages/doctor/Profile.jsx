@@ -94,7 +94,7 @@ const DoctorProfile = () => {
             <div className="space-y-1">
               <label className="text-sm font-medium text-slate-700">Specialization</label>
               <input 
-                type="text" required
+                type="text"
                 value={formData.specialization}
                 onChange={(e) => setFormData({...formData, specialization: e.target.value})}
                 className="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
@@ -104,7 +104,7 @@ const DoctorProfile = () => {
             <div className="space-y-1">
               <label className="text-sm font-medium text-slate-700">Experience (Years)</label>
               <input 
-                type="number" required min="0"
+                type="number" min="0"
                 value={formData.experience}
                 onChange={(e) => setFormData({...formData, experience: e.target.value})}
                 className="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
@@ -116,7 +116,7 @@ const DoctorProfile = () => {
               <div className="relative">
                 <IndianRupee size={16} className="absolute left-3 top-3 text-slate-400" />
                 <input 
-                  type="number" required min="0"
+                  type="number" min="0"
                   value={formData.consultationFee}
                   onChange={(e) => setFormData({...formData, consultationFee: e.target.value})}
                   className="w-full border border-slate-300 rounded-lg p-2.5 pl-9 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
@@ -141,7 +141,7 @@ const DoctorProfile = () => {
             {formData.qualifications.map((qual, index) => (
               <div key={index} className="flex items-center gap-3">
                 <input 
-                  type="text" required
+                  type="text"
                   value={qual}
                   onChange={(e) => handleQualificationChange(index, e.target.value)}
                   className="flex-1 border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
@@ -183,7 +183,7 @@ const DoctorProfile = () => {
                 <div className="flex-1 space-y-1">
                   <label className="text-xs font-medium text-slate-500">Start Time</label>
                   <input 
-                    type="time" required
+                    type="time"
                     value={slot.startTime}
                     onChange={(e) => handleScheduleChange(index, 'startTime', e.target.value)}
                     className="w-full border border-slate-300 rounded-lg p-2 text-sm outline-none focus:border-indigo-500 bg-white"
@@ -192,7 +192,7 @@ const DoctorProfile = () => {
                 <div className="flex-1 space-y-1">
                   <label className="text-xs font-medium text-slate-500">End Time</label>
                   <input 
-                    type="time" required
+                    type="time"
                     value={slot.endTime}
                     onChange={(e) => handleScheduleChange(index, 'endTime', e.target.value)}
                     className="w-full border border-slate-300 rounded-lg p-2 text-sm outline-none focus:border-indigo-500 bg-white"
