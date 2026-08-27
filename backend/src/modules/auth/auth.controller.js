@@ -269,9 +269,23 @@ const updateProfilePhoto = async (req, res) => {
         const userId = req.user.sub || req.user._id || req.user.id;
         const user = await Auth.findByIdAndUpdate(
             userId,
-            { profilePicture: file.path }, // multer-storage-cloudinary stores the URL in path
+            { profilePicture: file.path },
             { new: true }
         );
+
+        // Sync with specific profile models if they exist
+        if (user) {
+            if (user.role === 'patient') {
+                const Patient = require('../patient/patient.model');
+                await Patient.findOneAndUpdate({ user: userId }, { photo: file.path });
+            } else if (user.role === 'doctor') {
+                const Doctor = require('../doctor/doctor.model');
+                await Doctor.findOneAndUpdate({ user: userId }, { profilePicture: file.path });
+            } else if (['receptionist', 'pharmacist', 'lab_technician'].includes(user.role)) {
+                const Staff = require('../staff/staff.model');
+                await Staff.findOneAndUpdate({ user: userId }, { profilePicture: file.path });
+            }
+        }
 
         res.status(200).json({ 
             success: true,

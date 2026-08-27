@@ -39,6 +39,7 @@ import api from '../../services/api';
 import { getSocket, joinRoom } from '../../services/socket';
 import VideoRoomModal from '../consultation/VideoRoomModal';
 import ChatRoomModal from '../consultation/ChatRoomModal';
+import ProfilePictureUpload from '../ui/ProfilePictureUpload';
 
 const DashboardLayout = () => {
   const { user, logout } = useAuth();
@@ -387,19 +388,24 @@ const DashboardLayout = () => {
               {showProfileMenu && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowProfileMenu(false)}></div>
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50 animate-fade-in origin-top-right">
-                    <div className="px-4 py-2 border-b border-slate-100 sm:hidden">
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50 animate-fade-in origin-top-right">
+                    <div className="px-4 py-4 border-b border-slate-100 flex flex-col items-center">
+                      <div className="mb-2">
+                        <ProfilePictureUpload currentImage={user?.profilePicture} size="w-16 h-16" />
+                      </div>
                       <p className="text-sm font-bold text-slate-900">{user?.firstName} {user?.lastName}</p>
                       <p className="text-xs text-slate-500 capitalize">{user?.role?.replace('_', ' ')}</p>
                     </div>
-                    <Link 
-                      to={`/${user?.role?.replace('_', '-')}/profile`}
-                      onClick={() => setShowProfileMenu(false)}
-                      className="flex items-center w-full px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
-                    >
-                      <User className="w-4 h-4 mr-3 text-slate-400" /> My Profile
-                    </Link>
-                    <button onClick={logout} className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">
+                    {user?.role !== 'super_admin' && (
+                      <Link 
+                        to={`/${user?.role?.replace('_', '-')}/profile`}
+                        onClick={() => setShowProfileMenu(false)}
+                        className="flex items-center w-full px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                      >
+                        <User className="w-4 h-4 mr-3 text-slate-400" /> My Profile
+                      </Link>
+                    )}
+                    <button onClick={logout} className="flex items-center w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors">
                       <LogOut className="w-4 h-4 mr-3 text-red-500" /> Sign Out
                     </button>
                   </div>

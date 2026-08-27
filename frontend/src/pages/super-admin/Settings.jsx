@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
+import ProfilePictureUpload from '../../components/ui/ProfilePictureUpload';
 
 const Settings = () => {
   const { user } = useAuth();
@@ -23,20 +24,7 @@ const Settings = () => {
           </h2>
           
           <div className="flex flex-col sm:flex-row gap-8 mb-6">
-            <div className="flex-shrink-0">
-              <div className="w-24 h-24 rounded-full bg-slate-100 border-2 border-slate-200 overflow-hidden relative group cursor-pointer">
-                {user?.profilePicture ? (
-                  <img src={user.profilePicture} alt="Profile" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-slate-400">
-                    <User className="w-8 h-8" />
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <span className="text-white text-xs font-semibold">Change</span>
-                </div>
-              </div>
-            </div>
+            <ProfilePictureUpload currentImage={user?.profilePicture} size="w-24 h-24" />
             
             <div className="flex-1 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

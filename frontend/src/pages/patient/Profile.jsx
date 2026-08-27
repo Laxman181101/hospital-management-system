@@ -6,8 +6,7 @@ import Badge from '../../components/ui/Badge';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
-import Cropper from 'react-easy-crop';
-import getCroppedImg from '../../utils/cropImage';
+import ProfilePictureUpload from '../../components/ui/ProfilePictureUpload';
 
 const PatientProfile = () => {
   const { user, updateUserSession } = useAuth();
@@ -137,33 +136,7 @@ const PatientProfile = () => {
           <Card className="p-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
               {/* Avatar */}
-              <div className="relative">
-                <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-4xl font-bold shadow-lg overflow-hidden relative group">
-                  {(form.photoPreview || profile?.photo) ? (
-                    <img src={form.photoPreview || profile.photo} alt="Profile" className="w-full h-full object-cover" />
-                  ) : initial}
-                  
-                  {editing && (
-                    <label className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
-                      <Camera size={24} className="text-white" />
-                      <span className="text-white text-[10px] mt-1 font-medium uppercase tracking-wider">Change</span>
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        className="hidden" 
-                        onChange={(e) => {
-                          const file = e.target.files[0];
-                          if (file) {
-                            setImageToCrop(URL.createObjectURL(file));
-                            setCropModalOpen(true);
-                            e.target.value = null;
-                          }
-                        }}
-                      />
-                    </label>
-                  )}
-                </div>
-              </div>
+              <ProfilePictureUpload currentImage={profile?.photo || user?.profilePicture} size="w-24 h-24" />
 
               {/* Info */}
               <div className="flex-1">
@@ -295,59 +268,6 @@ const PatientProfile = () => {
             </div>
           </Card>
         </>
-      )}
-
-      {/* Crop Modal */}
-      {cropModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden flex flex-col">
-            <div className="p-4 border-b flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-slate-800">Crop Profile Photo</h3>
-              <button onClick={() => setCropModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                <X size={20} />
-              </button>
-            </div>
-            <div className="relative h-64 w-full bg-slate-100">
-              <Cropper
-                image={imageToCrop}
-                crop={crop}
-                zoom={zoom}
-                aspect={1}
-                onCropChange={setCrop}
-                onCropComplete={(_, croppedAreaPixels) => setCroppedAreaPixels(croppedAreaPixels)}
-                onZoomChange={setZoom}
-              />
-            </div>
-            <div className="p-4 space-y-4">
-              <div>
-                <label className="text-xs font-semibold text-slate-500 mb-2 block">Zoom</label>
-                <input
-                  type="range"
-                  value={zoom}
-                  min={1}
-                  max={3}
-                  step={0.1}
-                  aria-labelledby="Zoom"
-                  onChange={(e) => setZoom(Number(e.target.value))}
-                  className="w-full"
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={() => setCropModalOpen(false)}>Cancel</Button>
-                <Button onClick={async () => {
-                  try {
-                    const croppedImageBlob = await getCroppedImg(imageToCrop, croppedAreaPixels, 0);
-                    const croppedFile = new File([croppedImageBlob], "profile.jpeg", { type: "image/jpeg" });
-                    setForm({ ...form, photoFile: croppedFile, photoPreview: URL.createObjectURL(croppedImageBlob) });
-                    setCropModalOpen(false);
-                  } catch (e) {
-                    showToast("Failed to crop image", "error");
-                  }
-                }}>Apply Crop</Button>
-              </div>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );
