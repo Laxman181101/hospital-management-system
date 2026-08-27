@@ -121,9 +121,7 @@ const RegisterStaffModal = ({ onClose, onSuccess }) => {
       });
       if (profilePicture) payload.append('profilePicture', profilePicture);
 
-      await api.post('/api/v1/auth/register-staff', payload, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      await api.post('/api/v1/auth/register-staff', payload);
       
       setCredentials({ email: formData.email, password: formData.password });
       setShowCredentials(true);

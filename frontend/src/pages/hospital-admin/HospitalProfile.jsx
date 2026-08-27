@@ -130,9 +130,7 @@ const HospitalProfile = () => {
     try {
       const payload = new FormData();
       payload.append('logo', file);
-      await api.post(`/api/v1/hospitals/${hospital._id}/upload-logo`, payload, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      await api.post(`/api/v1/hospitals/${hospital._id}/upload-logo`, payload);
       addToast('success', 'Logo uploaded successfully');
       fetchHospitalData();
     } catch (error) {
@@ -148,9 +146,7 @@ const HospitalProfile = () => {
       for (let i = 0; i < files.length; i++) {
         payload.append('images', files[i]);
       }
-      await api.post(`/api/v1/hospitals/${hospital._id}/upload-images`, payload, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      await api.post(`/api/v1/hospitals/${hospital._id}/upload-images`, payload);
       addToast('success', 'Images uploaded successfully');
       fetchHospitalData();
     } catch (error) {

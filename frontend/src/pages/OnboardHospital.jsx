@@ -117,9 +117,7 @@ const OnboardHospital = () => {
       });
       payload.append('document', documentFile);
 
-      await api.post('/api/v1/hospitals/onboard', payload, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      await api.post('/api/v1/hospitals/onboard', payload);
 
       setSuccess(true);
     } catch (error) {

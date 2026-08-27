@@ -164,9 +164,7 @@ const ChatRoomModal = ({ isOpen, onClose, consultationData, onSessionEnd }) => {
 
     try {
       // 1. Upload file
-      const uploadRes = await api.post('/api/v1/chat-consultations/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const uploadRes = await api.post('/api/v1/chat-consultations/upload', formData);
       const fileUrl = uploadRes.data.data?.url;
 
       // 2. Send message with uploaded file url

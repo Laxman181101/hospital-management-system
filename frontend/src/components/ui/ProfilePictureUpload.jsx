@@ -30,9 +30,7 @@ const ProfilePictureUpload = ({ currentImage, size = 'w-24 h-24', onUploadSucces
       const formData = new FormData();
       formData.append('photo', croppedBlob, 'profile.jpg');
 
-      const res = await api.patch('/api/v1/auth/profile/photo', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const res = await api.patch('/api/v1/auth/profile/photo', formData);
 
       if (res.data.success || res.status === 200) {
         addToast('success', 'Profile photo updated successfully');

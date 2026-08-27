@@ -45,9 +45,7 @@ const MedicalRecords = () => {
 
     try {
       setUploading(true);
-      await api.post('/api/v1/patients/reports/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      await api.post('/api/v1/patients/reports/upload', formData);
       addToast('success', 'Report uploaded successfully');
       setTitle('');
       setFile(null);

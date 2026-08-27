@@ -80,11 +80,7 @@ const ManualRegistration = () => {
         payload.append('password', 'HMS@1234');
       }
 
-      const res = await api.post('/api/v1/patients/manual', payload, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+      const res = await api.post('/api/v1/patients/manual', payload);
 
       addToast('success', 'Patient registered successfully');
       setSuccessData(res.data.patient || res.data.data);

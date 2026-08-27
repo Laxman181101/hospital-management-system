@@ -10,9 +10,7 @@ const api = axios.create({
 export const authService = {
   // Register a new user (multipart/form-data)
   register: async (formData) => {
-    const response = await api.post('/register', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const response = await api.post('/register', formData);
     return response.data;
   },
 

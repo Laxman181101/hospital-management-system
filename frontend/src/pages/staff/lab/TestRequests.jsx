@@ -76,9 +76,7 @@ const TestRequests = () => {
       const formData = new FormData();
       formData.append('file', file);
 
-      const res = await api.patch(`/api/v1/laboratory/requests/${selectedRequest._id}/tests/${testItemId}/report`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const res = await api.patch(`/api/v1/laboratory/requests/${selectedRequest._id}/tests/${testItemId}/report`, formData);
       showToast('success', 'Report uploaded successfully');
       setSelectedRequest(res.data.data);
     } catch (error) {
