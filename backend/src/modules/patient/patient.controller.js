@@ -480,15 +480,29 @@ const getAllPatients = async (req, res) => {
             const conditions = [];
 
             if (role !== 'super_admin' && req.user.hospitalId) {
+                // To ensure strict tenant isolation, a hospital should only see:
+                // 1. Patients explicitly registered at their hospital (hospitalId matches)
+                // 2. Global patients who have booked at least one appointment at their hospital
+                const Appointment = require('../appointment/appointment.model');
+                const hospitalAppointments = await Appointment.find({ hospital: req.user.hospitalId }).distinct('patient');
+                
                 conditions.push({
                     $or: [
                         { hospitalId: req.user.hospitalId },
-                        { registrationMethod: 'self' },
-                        { hospitalId: null }
+                        { _id: { $in: hospitalAppointments } }
                     ]
                 });
             } else if (req.query.hospitalId) {
-                conditions.push({ hospitalId: req.query.hospitalId });
+                // If super_admin is filtering by a specific hospital
+                const Appointment = require('../appointment/appointment.model');
+                const hospitalAppointments = await Appointment.find({ hospital: req.query.hospitalId }).distinct('patient');
+                
+                conditions.push({
+                    $or: [
+                        { hospitalId: req.query.hospitalId },
+                        { _id: { $in: hospitalAppointments } }
+                    ]
+                });
             }
 
             if (req.query.name) {
@@ -544,9 +558,14 @@ const getAllPatients = async (req, res) => {
             if (!doctor) {
                 return res.status(404).json({ message: 'Doctor profile not found' });
             }
+            
+            const Appointment = require('../appointment/appointment.model');
+            const doctorAppointments = await Appointment.find({ doctor: doctor._id }).distinct('patient');
+
             let query = Patient.find({
                 isDeleted: { $ne: true },
                 $or: [
+                    { _id: { $in: doctorAppointments } },
                     { 'appointments.doctorName': doctor.name },
                     { 'prescriptions.doctorName': doctor.name }
                 ]
