@@ -281,9 +281,6 @@ const updateProfilePhoto = async (req, res) => {
             } else if (user.role === 'doctor') {
                 const Doctor = require('../doctor/doctor.model');
                 await Doctor.findOneAndUpdate({ user: userId }, { profilePicture: file.path });
-            } else if (['receptionist', 'pharmacist', 'lab_technician'].includes(user.role)) {
-                const Staff = require('../staff/staff.model');
-                await Staff.findOneAndUpdate({ user: userId }, { profilePicture: file.path });
             }
         }
 
