@@ -122,11 +122,21 @@ const BookAppointment = () => {
     }
   };
 
+  const [hospitalSearch, setHospitalSearch] = useState('');
+
+  const filteredHospitals = hospitals.filter(h => {
+    const name = (h.hospitalName || h.name || '').toLowerCase();
+    const city = (h.address?.city || h.city || '').toLowerCase();
+    const street = (h.address?.street || '').toLowerCase();
+    const q = hospitalSearch.toLowerCase().trim();
+    return name.includes(q) || city.includes(q) || street.includes(q);
+  });
+
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-8">
+    <div className="max-w-4xl mx-auto space-y-8 pb-12">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Book Appointment</h1>
-        <p className="text-slate-500 mt-1">Schedule a new visit with your preferred doctor.</p>
+        <p className="text-slate-500 text-sm mt-1">Schedule a new visit with your preferred doctor.</p>
       </div>
 
       {/* Progress Steps */}
@@ -149,22 +159,76 @@ const BookAppointment = () => {
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
         {step === 1 && (
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-slate-800 mb-4">Select a Hospital</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {hospitals.map(h => (
-                <div 
-                  key={h._id}
-                  onClick={() => { setSelectedHospital(h); setStep(2); }}
-                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedHospital?._id === h._id ? 'border-indigo-600 bg-indigo-50/50' : 'border-slate-100 hover:border-indigo-200 hover:bg-slate-50'}`}
-                >
-                  <div className="font-bold text-slate-900">{h.name}</div>
-                  <div className="text-sm text-slate-500 flex items-center gap-1 mt-2">
-                    <MapPin size={14} /> {h.address?.city || 'Location not specified'}
-                  </div>
-                </div>
-              ))}
+          <div className="space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Select a Hospital</h2>
+                <p className="text-xs text-slate-500">Choose from verified & approved partner hospitals</p>
+              </div>
+              <div className="relative sm:w-64">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search hospital or city..."
+                  value={hospitalSearch}
+                  onChange={(e) => setHospitalSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:bg-white transition-all"
+                />
+              </div>
             </div>
+
+            {filteredHospitals.length === 0 ? (
+              <div className="py-12 text-center text-slate-500">
+                <Building2 size={36} className="mx-auto text-slate-300 mb-2" />
+                <p className="font-semibold text-slate-700">No hospitals found</p>
+                <p className="text-xs text-slate-400 mt-1">Try adjusting your search criteria</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredHospitals.map(h => {
+                  const hName = h.hospitalName || h.name || 'Hospital';
+                  const hCity = h.address?.city || h.city || '';
+                  const hStreet = h.address?.street || '';
+                  const isSelected = selectedHospital?._id === h._id;
+
+                  return (
+                    <div 
+                      key={h._id}
+                      onClick={() => { setSelectedHospital(h); setStep(2); }}
+                      className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-start gap-4 ${
+                        isSelected 
+                          ? 'border-indigo-600 bg-indigo-50/60 shadow-md ring-2 ring-indigo-500/20' 
+                          : 'border-slate-100 bg-white hover:border-indigo-200 hover:bg-slate-50/80 hover:shadow-sm'
+                      }`}
+                    >
+                      <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0 text-indigo-600 font-bold">
+                        {h.logoUrl ? (
+                          <img src={h.logoUrl} alt={hName} className="w-full h-full object-contain p-1 rounded-xl" />
+                        ) : (
+                          <Building2 size={24} />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-slate-900 text-base leading-snug truncate mb-1">{hName}</div>
+                        <div className="text-xs text-slate-500 flex items-center gap-1.5 mb-1.5">
+                          <MapPin size={13} className="text-slate-400 shrink-0" />
+                          <span className="truncate">{hStreet ? `${hStreet}, ` : ''}{hCity || 'Location not specified'}</span>
+                        </div>
+                        {h.phone && (
+                          <div className="text-xs text-slate-500 flex items-center gap-1.5">
+                            <Phone size={12} className="text-slate-400 shrink-0" />
+                            <span>{h.phone}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="self-center">
+                        <ChevronRight size={18} className="text-slate-300" />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
