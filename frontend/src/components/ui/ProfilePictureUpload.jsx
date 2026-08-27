@@ -9,7 +9,7 @@ const ProfilePictureUpload = ({ currentImage, size = 'w-24 h-24', onUploadSucces
   const [imageSrc, setImageSrc] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
-  const { updateUser } = useAuth();
+  const { updateUserSession } = useAuth();
   const { addToast } = useToast();
 
   const handleFileChange = (e) => {
@@ -39,8 +39,8 @@ const ProfilePictureUpload = ({ currentImage, size = 'w-24 h-24', onUploadSucces
         const newPhotoUrl = res.data.profilePicture || res.data.photo;
         
         // Update global auth state
-        if (updateUser) {
-          updateUser({ profilePicture: newPhotoUrl });
+        if (updateUserSession) {
+          updateUserSession({ profilePicture: newPhotoUrl });
         }
         
         // Call optional callback
