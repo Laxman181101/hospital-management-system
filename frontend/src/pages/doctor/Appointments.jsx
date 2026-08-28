@@ -26,6 +26,11 @@ const DoctorAppointments = () => {
   const [showConsultationModal, setShowConsultationModal] = useState(false);
   const [selectedAppt, setSelectedAppt] = useState(null);
 
+  const handleStartConsultation = (appt) => {
+    setSelectedAppt(appt);
+    setShowConsultationModal(true);
+  };
+
   const columns = [
     {
       header: 'Patient',
