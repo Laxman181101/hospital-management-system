@@ -412,13 +412,13 @@ const DoctorAppointments = () => {
 
             {isActive && (
               <Button 
-                variant="outline" 
                 size="sm"
-                className="text-red-600 border-red-200 hover:bg-red-50 p-1.5"
+                className="bg-white text-red-600 border border-red-200 hover:bg-red-600 hover:text-white hover:border-red-600 transition-all text-xs py-1 px-2.5 font-semibold shadow-sm flex items-center gap-1 rounded-lg"
                 onClick={() => setCancelModal({ isOpen: true, appointmentId: row._id, reason: '' })}
                 title="Cancel Appointment"
               >
-                <XCircle size={15} />
+                <X size={14} />
+                <span>Cancel</span>
               </Button>
             )}
           </div>
