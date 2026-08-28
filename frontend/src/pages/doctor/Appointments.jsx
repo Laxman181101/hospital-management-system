@@ -164,6 +164,7 @@ const DoctorAppointments = () => {
       render: (row) => {
         const isVirtual = ['video', 'chat', 'audio'].includes(row.appointmentType);
         const isActive = row.status === 'pending' || row.status === 'confirmed';
+        const isConfirmed = row.status === 'confirmed';
 
         if (row.status === 'completed') {
           return (
@@ -204,10 +205,12 @@ const DoctorAppointments = () => {
             {isVirtual && isActive && (
               <Button
                 size="sm"
+                disabled={!isConfirmed}
+                title={!isConfirmed ? 'Waiting for receptionist confirmation' : (row.appointmentType === 'video' ? 'Start Call' : 'Chat')}
                 className={`text-xs py-1 px-2.5 flex items-center gap-1 shadow-sm ${
-                  row.appointmentType === 'video'
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                    : 'bg-purple-600 hover:bg-purple-700 text-white'
+                  !isConfirmed 
+                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-70' 
+                    : (row.appointmentType === 'video' ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-purple-600 hover:bg-purple-700 text-white')
                 }`}
                 onClick={() => {
                   try {
@@ -236,7 +239,17 @@ const DoctorAppointments = () => {
             )}
 
             {isActive && (
-              <Button size="sm" onClick={() => handleStartConsultation(row)} className="bg-indigo-600 hover:bg-indigo-700 text-xs py-1.5 px-3.5 text-white font-semibold shadow-sm">
+              <Button 
+                size="sm" 
+                disabled={!isConfirmed}
+                title={!isConfirmed ? 'Waiting for receptionist confirmation' : 'Consult Patient'}
+                onClick={() => handleStartConsultation(row)} 
+                className={`text-xs py-1.5 px-3.5 font-semibold shadow-sm ${
+                  !isConfirmed
+                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-70'
+                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                }`}
+              >
                 Consult
               </Button>
             )}
