@@ -98,7 +98,30 @@ const BookAppointment = () => {
   }, [selectedDate, selectedDoctor]);
 
   const handleBook = async () => {
-    if (!selectedHospital || !selectedDoctor || !selectedDate || !selectedSlot) {
+    let date = selectedDate;
+    let slot = selectedSlot;
+    
+    if (appointmentType === 'chat') {
+      const now = new Date();
+      date = now.toISOString().split('T')[0];
+      
+      let hours = now.getHours();
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const modifier = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12 || 12;
+      const startTime = `${String(hours).padStart(2, '0')}:${minutes} ${modifier}`;
+      
+      now.setMinutes(now.getMinutes() + 15);
+      hours = now.getHours();
+      const endMinutes = String(now.getMinutes()).padStart(2, '0');
+      const endModifier = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12 || 12;
+      const endTime = `${String(hours).padStart(2, '0')}:${endMinutes} ${endModifier}`;
+      
+      slot = { startTime, endTime };
+    }
+
+    if (!selectedHospital || !selectedDoctor || !date || !slot) {
       return addToast('error', 'Please fill all fields');
     }
     try {
@@ -106,9 +129,9 @@ const BookAppointment = () => {
       await api.post('/api/v1/appointments', {
         hospital: selectedHospital._id,
         doctor: selectedDoctor._id,
-        appointmentDate: selectedDate,
-        startTime: selectedSlot.startTime,
-        endTime: selectedSlot.endTime,
+        appointmentDate: date,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
         appointmentType,
         bookingMode: 'online',
         reason: reason || 'General checkup'
@@ -280,8 +303,20 @@ const BookAppointment = () => {
             <button onClick={() => setStep(2)} className="text-sm text-indigo-600 hover:underline">&larr; Back to Doctors</button>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Select Date</label>
+              <div className={appointmentType === 'chat' ? 'md:col-span-2 max-w-xl' : ''}>
+                {appointmentType !== 'chat' && (
+                  <>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Select Date</label>
+                    <input 
+                      type="date" 
+                      min={new Date().toISOString().split('T')[0]}
+                      value={selectedDate}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                      className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                    />
+                  </>
+                )}
+                
                 <input 
                   type="date" 
                   min={new Date().toISOString().split('T')[0]}
@@ -326,6 +361,7 @@ const BookAppointment = () => {
                 />
               </div>
 
+              {appointmentType !== 'chat' && (
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Available Slots</label>
                 {!selectedDate ? (
@@ -388,10 +424,11 @@ const BookAppointment = () => {
                   </div>
                 )}
               </div>
+            )}
             </div>
 
             <div className="flex justify-end pt-6 border-t border-slate-100">
-              <Button onClick={handleBook} isLoading={loading} disabled={!selectedDate || !selectedSlot}>
+              <Button onClick={handleBook} isLoading={loading} disabled={appointmentType !== 'chat' && (!selectedDate || !selectedSlot)}>
                 Confirm Booking
               </Button>
             </div>
