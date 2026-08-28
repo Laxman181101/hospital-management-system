@@ -346,8 +346,19 @@ const DoctorAppointments = () => {
 
         if (row.status === 'cancelled') {
           return (
-            <div className="flex flex-col items-end">
-              <span className="text-xs text-red-500 font-bold bg-red-50 px-2 py-0.5 rounded border border-red-100">Cancelled</span>
+            <div className="flex flex-col items-end gap-1">
+              <div className="flex items-center gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => handleUpdateStatus(row._id, 'pending')}
+                  className="text-[10px] py-0.5 px-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50 font-semibold"
+                  title="Undo Cancellation and Re-activate"
+                >
+                  Undo
+                </Button>
+                <span className="text-xs text-red-500 font-bold bg-red-50 px-2 py-0.5 rounded border border-red-100">Cancelled</span>
+              </div>
               {row.cancellationReason && (
                 <span className="text-[10px] text-slate-500 mt-1 max-w-[120px] truncate" title={row.cancellationReason}>
                   Reason: {row.cancellationReason}
