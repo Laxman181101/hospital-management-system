@@ -26,6 +26,36 @@ const DoctorAppointments = () => {
   const [showConsultationModal, setShowConsultationModal] = useState(false);
   const [selectedAppt, setSelectedAppt] = useState(null);
 
+  const [cancelModal, setCancelModal] = useState({ isOpen: false, appointmentId: null, reason: '' });
+
+  const handleUpdateStatus = async (id, newStatus) => {
+    try {
+      await api.patch(`/api/v1/appointments/${id}/status`, { status: newStatus });
+      addToast('success', `Appointment marked as ${newStatus}`);
+      fetchAppointments();
+    } catch (err) {
+      addToast('error', `Failed to update status to ${newStatus}`);
+    }
+  };
+
+  const handleCancelSubmit = async () => {
+    if (!cancelModal.reason.trim()) {
+      addToast('error', 'Cancellation reason is required');
+      return;
+    }
+    try {
+      await api.patch(`/api/v1/appointments/${cancelModal.appointmentId}/status`, { 
+        status: 'cancelled', 
+        cancellationReason: cancelModal.reason 
+      });
+      addToast('success', 'Appointment cancelled successfully');
+      setCancelModal({ isOpen: false, appointmentId: null, reason: '' });
+      fetchAppointments();
+    } catch (err) {
+      addToast('error', err.response?.data?.message || 'Failed to cancel appointment');
+    }
+  };
+
   const handleStartConsultation = (appt) => {
     setSelectedAppt(appt);
     setShowConsultationModal(true);
