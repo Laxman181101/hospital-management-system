@@ -23,7 +23,7 @@ import { getSocket, joinSession, leaveSession } from '../../services/socket';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
 
-const ChatRoomModal = ({ isOpen, onClose, consultationData, onSessionEnd }) => {
+const ChatRoomModal = ({ isOpen, onClose, consultationData, onSessionEnd, onRequestPrescription }) => {
   const { user } = useAuth();
   const { addToast } = useToast();
 
@@ -55,6 +55,21 @@ const ChatRoomModal = ({ isOpen, onClose, consultationData, onSessionEnd }) => {
     let isMounted = true;
     setLoading(true);
 
+    // Socket listeners for call ending
+    const s = getSocket();
+    const handleEndCallEvent = (data) => {
+      const apptId = consultationData.appointmentId || consultationData._id;
+      const incomingApptId = data?.appointment?._id || data?.appointment;
+      if (apptId && incomingApptId && apptId.toString() === incomingApptId.toString()) {
+        addToast('info', 'Chat session was closed by the host.');
+        setIsClosed(true);
+        onClose();
+      }
+    };
+    if (s) {
+      s.on('end_call', handleEndCallEvent);
+    }
+    
     const initChatSession = async () => {
       try {
         let currentSession = null;
@@ -242,14 +257,25 @@ const ChatRoomModal = ({ isOpen, onClose, consultationData, onSessionEnd }) => {
 
           <div className="flex items-center gap-2">
             {!isClosed && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleEndSession}
-                className="text-xs bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500 hover:text-white"
-              >
-                End Session
-              </Button>
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleEndSession}
+                  className="text-xs bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500 hover:text-white"
+                >
+                  End Chat
+                </Button>
+                {isDoctor && (
+                  <Button
+                    size="sm"
+                    onClick={handleEndAndPrescribe}
+                    className="text-xs bg-indigo-600/20 text-indigo-400 border-indigo-500/30 hover:bg-indigo-600 hover:text-white flex items-center gap-1"
+                  >
+                    <FileText size={14} /> End & Prescribe
+                  </Button>
+                )}
+              </>
             )}
             <button
               onClick={onClose}

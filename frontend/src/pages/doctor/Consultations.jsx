@@ -21,6 +21,7 @@ import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import VideoRoomModal from '../../components/consultation/VideoRoomModal';
 import ChatRoomModal from '../../components/consultation/ChatRoomModal';
+import ConsultationFormModal from '../../components/consultation/ConsultationFormModal';
 import api from '../../services/api';
 import { getSocket } from '../../services/socket';
 import { useToast } from '../../context/ToastContext';
@@ -37,6 +38,8 @@ const DoctorConsultations = () => {
 
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedHistory, setSelectedHistory] = useState(null);
+  const [showConsultationModal, setShowConsultationModal] = useState(false);
+  const [selectedApptForPrescription, setSelectedApptForPrescription] = useState(null);
 
   // Active Modals
   const [activeVideoAppt, setActiveVideoAppt] = useState(null);
@@ -397,7 +400,15 @@ const DoctorConsultations = () => {
           isOpen={Boolean(activeVideoAppt)}
           onClose={() => setActiveVideoAppt(null)}
           consultationData={activeVideoAppt}
-          onConsultationComplete={loadData}
+          onConsultationComplete={() => {
+            setActiveVideoAppt(null);
+            loadData();
+          }}
+          onRequestPrescription={(appt) => {
+            setActiveVideoAppt(null);
+            setSelectedApptForPrescription(appt);
+            setShowConsultationModal(true);
+          }}
         />
       )}
 
@@ -407,9 +418,24 @@ const DoctorConsultations = () => {
           isOpen={Boolean(activeChatAppt)}
           onClose={() => setActiveChatAppt(null)}
           consultationData={activeChatAppt}
-          onSessionEnd={loadData}
+          onSessionEnd={() => {
+            setActiveChatAppt(null);
+            loadData();
+          }}
+          onRequestPrescription={(appt) => {
+            setActiveChatAppt(null);
+            setSelectedApptForPrescription(appt);
+            setShowConsultationModal(true);
+          }}
         />
       )}
+
+      <ConsultationFormModal 
+        isOpen={showConsultationModal}
+        onClose={() => setShowConsultationModal(false)}
+        selectedAppt={selectedApptForPrescription}
+        onSuccess={loadData}
+      />
 
       {/* View Consultation Modal */}
       {showViewModal && selectedHistory && (

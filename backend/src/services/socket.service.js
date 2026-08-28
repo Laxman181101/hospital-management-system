@@ -58,6 +58,25 @@ const initSocket = (server) => {
             console.log(`[SocketService] Emitted incoming_call from ${callerName} to targets:`, Array.from(targets));
         });
 
+        socket.on('end_call', ({ toUserId, patientUserIds, appointment }) => {
+            const targets = new Set();
+            if (toUserId) targets.add(toUserId.toString());
+            if (Array.isArray(patientUserIds)) {
+                patientUserIds.forEach(id => id && targets.add(id.toString()));
+            }
+            if (appointment) {
+                if (appointment.patient?._id) targets.add(appointment.patient._id.toString());
+                if (appointment.patient?.user?._id) targets.add(appointment.patient.user._id.toString());
+                if (appointment.patient?.user) targets.add(appointment.patient.user.toString());
+                if (typeof appointment.patient === 'string') targets.add(appointment.patient);
+            }
+
+            targets.forEach(uid => {
+                sendToUser(uid, 'end_call', { appointment });
+            });
+            console.log(`[SocketService] Emitted end_call to targets:`, Array.from(targets));
+        });
+
         socket.on('disconnect', () => {
             console.log(`[SocketService] Client disconnected: ${socket.id}`);
         });

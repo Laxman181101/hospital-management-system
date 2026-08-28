@@ -25,7 +25,7 @@ import { getSocket } from '../../services/socket';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
 
-const VideoRoomModal = ({ isOpen, onClose, consultationData, onConsultationComplete }) => {
+const VideoRoomModal = ({ isOpen, onClose, consultationData, onConsultationComplete, onRequestPrescription }) => {
   const { user } = useAuth();
   const { addToast } = useToast();
 
@@ -57,7 +57,26 @@ const VideoRoomModal = ({ isOpen, onClose, consultationData, onConsultationCompl
     setLoading(true);
     setTimerSeconds(0);
 
-    const initMeeting = async () => {
+    useEffect(() => {
+    const s = getSocket();
+    if (s && isOpen && consultationData) {
+      const handleEndCallEvent = (data) => {
+        const apptId = consultationData.appointmentId || consultationData._id;
+        const incomingApptId = data?.appointment?._id || data?.appointment;
+        if (apptId && incomingApptId && apptId.toString() === incomingApptId.toString()) {
+          addToast('info', 'Call ended by the host.');
+          if (timerRef.current) clearInterval(timerRef.current);
+          onClose();
+        }
+      };
+      s.on('end_call', handleEndCallEvent);
+      return () => {
+        s.off('end_call', handleEndCallEvent);
+      };
+    }
+  }, [isOpen, consultationData, onClose, addToast]);
+
+  const initMeeting = async () => {
       try {
         const apptId = consultationData.appointmentId || consultationData._id || 'room';
         const cleanId = typeof apptId === 'string' ? apptId : apptId.toString();
@@ -128,8 +147,25 @@ const VideoRoomModal = ({ isOpen, onClose, consultationData, onConsultationCompl
 
   const handleEndCall = () => {
     if (timerRef.current) clearInterval(timerRef.current);
-    addToast('info', 'Video room closed. You can rejoin or document consultation notes whenever ready.');
+    
+    try {
+      const s = getSocket();
+      if (s) {
+        s.emit('end_call', {
+          appointment: consultationData
+        });
+      }
+    } catch (err) { console.error(err); }
+
+    addToast('info', 'Video room closed.');
     onClose();
+  };
+
+  const handleEndAndPrescribe = () => {
+    handleEndCall();
+    if (onRequestPrescription) {
+      onRequestPrescription(consultationData);
+    }
   };
 
   const handleSaveNotes = async () => {
@@ -207,17 +243,7 @@ const VideoRoomModal = ({ isOpen, onClose, consultationData, onConsultationCompl
 
           {/* Quick Header Actions */}
           <div className="flex items-center gap-2">
-            {isDoctor && (
-              <Button
-                size="sm"
-                variant={showNotesPanel ? 'primary' : 'outline'}
-                onClick={() => setShowNotesPanel(!showNotesPanel)}
-                className="text-xs flex items-center gap-1.5 bg-indigo-600/30 text-indigo-300 border-indigo-500/30 hover:bg-indigo-600 hover:text-white"
-              >
-                <FileText size={14} />
-                {showNotesPanel ? 'Hide Notes' : 'Clinical Notes'}
-              </Button>
-            )}
+            
 
             <Button
               size="sm"
@@ -358,8 +384,19 @@ const VideoRoomModal = ({ isOpen, onClose, consultationData, onConsultationCompl
               className="bg-red-600 hover:bg-red-700 text-white font-medium flex items-center gap-2 px-5 py-2 rounded-xl shadow-lg shadow-red-900/30"
             >
               <PhoneOff size={16} />
-              <span>Leave / End Call</span>
+              <span>End Call</span>
             </Button>
+
+            {isDoctor && (
+              <Button
+                size="sm"
+                onClick={handleEndAndPrescribe}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium flex items-center gap-2 px-5 py-2 rounded-xl shadow-lg shadow-indigo-900/30"
+              >
+                <FileText size={16} />
+                <span>End & Prescribe</span>
+              </Button>
+            )}
           </div>
 
           <div className="text-xs text-slate-500 font-mono hidden sm:block">
