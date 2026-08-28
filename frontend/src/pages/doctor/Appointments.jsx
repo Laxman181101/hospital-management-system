@@ -28,6 +28,26 @@ const DoctorAppointments = () => {
 
   const [cancelModal, setCancelModal] = useState({ isOpen: false, appointmentId: null, reason: '' });
 
+  const fetchAppointments = async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (statusFilter) params.append('status', statusFilter);
+      if (dateFilter) params.append('date', dateFilter);
+
+      const res = await api.get(`/api/v1/appointments/doctor?${params.toString()}`);
+      setAppointments(res.data.data || []);
+    } catch (err) {
+      addToast('error', 'Failed to fetch appointments');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAppointments();
+  }, [statusFilter, dateFilter]);
+
   const handleUpdateStatus = async (id, newStatus) => {
     try {
       await api.patch(`/api/v1/appointments/${id}/status`, { status: newStatus });
