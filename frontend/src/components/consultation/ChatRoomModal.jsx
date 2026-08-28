@@ -215,6 +215,13 @@ const ChatRoomModal = ({ isOpen, onClose, consultationData, onSessionEnd, onRequ
     }
   };
 
+  const handleEndAndPrescribe = async () => {
+    await handleEndSession();
+    if (onRequestPrescription) {
+      onRequestPrescription(consultationData);
+    }
+  };
+
   if (!isOpen || !consultationData) return null;
 
   const otherParticipantName = isDoctor 
