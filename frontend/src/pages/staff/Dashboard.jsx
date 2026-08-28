@@ -143,7 +143,7 @@ const StaffDashboard = () => {
       showToast(`Status updated to ${status}`, 'success');
       fetchDashboardData();
     } catch (err) {
-      showToast('Failed to update status', 'error');
+      showToast(err.response?.data?.message || 'Failed to update status', 'error');
     }
   };
 

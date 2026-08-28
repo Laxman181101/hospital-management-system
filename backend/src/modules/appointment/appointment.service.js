@@ -341,13 +341,7 @@ const updateAppointmentStatus =
       throw err;
     }
 
-    if (status === 'confirmed' && appointment.paymentStatus !== 'paid' && appointment.paymentStatus !== 'success') {
-      const err = new Error(
-        "Cannot confirm appointment without fee payment. Payment status is pending."
-      );
-      err.status = 400;
-      throw err;
-    }
+
 
     appointment.status = status;
     if (status === 'cancelled' && cancellationReason) {
