@@ -239,7 +239,7 @@ const getDoctorAppointments =
 
 // CANCEL APPOINTMENT
 const cancelAppointment =
-  async (appointmentId, userId, userRole) => {
+  async (appointmentId, userId, userRole, cancellationReason) => {
 
     const appointment =
       await Appointment.findById(
@@ -277,8 +277,10 @@ const cancelAppointment =
       throw err;
     }
 
-    appointment.status =
-      "cancelled";
+    appointment.status = "cancelled";
+    if (cancellationReason) {
+      appointment.cancellationReason = cancellationReason;
+    }
 
     await appointment.save();
 
@@ -293,7 +295,8 @@ const updateAppointmentStatus =
     appointmentId,
     status,
     userId,
-    userRole
+    userRole,
+    cancellationReason
   ) => {
 
     const appointment =
@@ -346,8 +349,10 @@ const updateAppointmentStatus =
       throw err;
     }
 
-    appointment.status =
-      status;
+    appointment.status = status;
+    if (status === 'cancelled' && cancellationReason) {
+      appointment.cancellationReason = cancellationReason;
+    }
 
     await appointment.save();
 

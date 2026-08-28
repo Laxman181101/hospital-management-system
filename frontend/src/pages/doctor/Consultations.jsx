@@ -155,7 +155,16 @@ const DoctorConsultations = () => {
       align: 'right',
       render: (row) => {
         if (row.status === 'cancelled') {
-          return <span className="text-xs text-slate-400 font-medium">Cancelled</span>;
+          return (
+            <div className="flex flex-col items-end">
+              <span className="text-xs text-red-500 font-bold bg-red-50 px-2 py-0.5 rounded border border-red-100">Cancelled</span>
+              {row.cancellationReason && (
+                <span className="text-[10px] text-slate-500 mt-1 max-w-[120px] truncate" title={row.cancellationReason}>
+                  Reason: {row.cancellationReason}
+                </span>
+              )}
+            </div>
+          );
         }
 
         if (row.status === 'completed') {

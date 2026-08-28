@@ -229,7 +229,8 @@ const cancelAppointment = async (req, res, next) => {
         const appointment = await appointmentService.cancelAppointment(
             req.params.id,
             req.user.sub,
-            req.user.role
+            req.user.role,
+            req.body.cancellationReason
         );
 
         res.status(200).json({
@@ -258,7 +259,8 @@ const updateAppointmentStatus = async (req, res, next) => {
             req.params.id,
             req.body.status,
             req.user.sub,
-            req.user.role
+            req.user.role,
+            req.body.cancellationReason
         );
 
         res.status(200).json({

@@ -53,6 +53,8 @@ const updateAppointmentStatusValidation =
           "cancelled"
         )
         .required(),
+    cancellationReason:
+      Joi.string().allow('', null).optional(),
   });
 
 const rescheduleAppointmentValidation =

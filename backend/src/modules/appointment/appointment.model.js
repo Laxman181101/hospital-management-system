@@ -83,6 +83,9 @@ const appointmentSchema = new mongoose.Schema({
     reason: {
         type: String
     },
+    cancellationReason: {
+        type: String
+    },
     bookingMode: {
         type: String,
         enum: ['online', 'walk-in'],

@@ -93,6 +93,8 @@ const DoctorAppointments = () => {
     fetchLabInventory();
   }, []);
 
+  const [cancelModal, setCancelModal] = useState({ isOpen: false, appointmentId: null, reason: '' });
+
   const handleUpdateStatus = async (id, newStatus) => {
     try {
       await api.patch(`/api/v1/appointments/${id}/status`, { status: newStatus });
@@ -100,6 +102,24 @@ const DoctorAppointments = () => {
       fetchAppointments();
     } catch (err) {
       addToast('error', `Failed to update status to ${newStatus}`);
+    }
+  };
+
+  const handleCancelSubmit = async () => {
+    if (!cancelModal.reason.trim()) {
+      addToast('error', 'Cancellation reason is required');
+      return;
+    }
+    try {
+      await api.patch(`/api/v1/appointments/${cancelModal.appointmentId}/status`, { 
+        status: 'cancelled', 
+        cancellationReason: cancelModal.reason 
+      });
+      addToast('success', 'Appointment cancelled successfully');
+      setCancelModal({ isOpen: false, appointmentId: null, reason: '' });
+      fetchAppointments();
+    } catch (err) {
+      addToast('error', err.response?.data?.message || 'Failed to cancel appointment');
     }
   };
 
@@ -326,8 +346,13 @@ const DoctorAppointments = () => {
 
         if (row.status === 'cancelled') {
           return (
-            <div className="flex items-center justify-end">
-              <span className="text-xs text-slate-400 font-medium">Cancelled</span>
+            <div className="flex flex-col items-end">
+              <span className="text-xs text-red-500 font-bold bg-red-50 px-2 py-0.5 rounded border border-red-100">Cancelled</span>
+              {row.cancellationReason && (
+                <span className="text-[10px] text-slate-500 mt-1 max-w-[120px] truncate" title={row.cancellationReason}>
+                  Reason: {row.cancellationReason}
+                </span>
+              )}
             </div>
           );
         }
@@ -379,7 +404,7 @@ const DoctorAppointments = () => {
                 variant="outline" 
                 size="sm"
                 className="text-red-600 border-red-200 hover:bg-red-50 p-1.5"
-                onClick={() => handleUpdateStatus(row._id, 'cancelled')}
+                onClick={() => setCancelModal({ isOpen: true, appointmentId: row._id, reason: '' })}
                 title="Cancel Appointment"
               >
                 <XCircle size={15} />
@@ -821,6 +846,45 @@ const DoctorAppointments = () => {
           consultationData={activeChatAppt}
           onSessionEnd={fetchAppointments}
         />
+      )}
+      {/* Cancel Appointment Modal */}
+      {cancelModal.isOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-red-50/50">
+              <h2 className="text-lg font-bold text-red-700 flex items-center gap-2">
+                <XCircle size={20} /> Cancel Appointment
+              </h2>
+              <button onClick={() => setCancelModal({ isOpen: false, appointmentId: null, reason: '' })} className="text-slate-400 hover:text-slate-600">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-5">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Reason for cancellation <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={cancelModal.reason}
+                onChange={(e) => setCancelModal({ ...cancelModal, reason: e.target.value })}
+                className="w-full border border-slate-300 rounded-lg p-3 text-sm outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 resize-none h-24"
+                placeholder="Please provide a reason to cancel this appointment..."
+                autoFocus
+              />
+            </div>
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setCancelModal({ isOpen: false, appointmentId: null, reason: '' })}>
+                Go Back
+              </Button>
+              <Button 
+                onClick={handleCancelSubmit} 
+                disabled={!cancelModal.reason.trim()}
+                className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Confirm Cancellation
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
